@@ -31,7 +31,10 @@ import {
   Link2, 
   Flag, 
   BarChart3, 
-  Activity
+  Activity,
+  Radio,
+  Wifi,
+  WifiOff
 } from "lucide-react";
 import { useWorkspaceContext } from "@/lib/use-workspace-context";
 import { usePortfolioHistory, usePortfolioSummary, useSyncPortfolio } from "@/hooks/use-portfolio";
@@ -50,9 +53,20 @@ export function PortfolioChart({ selectedPeriod, onPeriodChange, mode }: Portfol
   
   const periods: TimePeriod[] = ["1D", "1W", "1M", "3M", "6M", "1Y", "YTD"];
   
+  // Real-time mode state (only available for 1D period)
+  const [realTimeEnabled, setRealTimeEnabled] = useState<boolean>(false);
+  const isRealTimeAvailable = selectedPeriod === "1D";
+  
+  // Auto-disable real-time when switching away from 1D
+  useEffect(() => {
+    if (selectedPeriod !== "1D" && realTimeEnabled) {
+      setRealTimeEnabled(false);
+    }
+  }, [selectedPeriod, realTimeEnabled]);
+  
   // Fetch real data from API
-  const { data: historyData, isLoading: historyLoading, error: historyError } = usePortfolioHistory(selectedPeriod);
-  const { data: summaryData, isLoading: summaryLoading } = usePortfolioSummary();
+  const { data: historyData, isLoading: historyLoading, error: historyError, isFetching: historyFetching } = usePortfolioHistory(selectedPeriod, undefined, realTimeEnabled && isRealTimeAvailable);
+  const { data: summaryData, isLoading: summaryLoading, isFetching: summaryFetching } = usePortfolioSummary(realTimeEnabled && isRealTimeAvailable);
   const syncMutation = useSyncPortfolio();
   
   // Calculate last sync time from summary data
@@ -375,6 +389,36 @@ export function PortfolioChart({ selectedPeriod, onPeriodChange, mode }: Portfol
                 </div>
               </div>
               
+              {/* Real-Time Toggle (only for 1D period) */}
+              {isRealTimeAvailable && (
+                <Button
+                  size="sm"
+                  variant={realTimeEnabled ? "default" : "outline"}
+                  className={realTimeEnabled 
+                    ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/30" 
+                    : "border-slate-600 text-slate-300 hover:text-white hover:bg-slate-700"
+                  }
+                  onClick={() => setRealTimeEnabled(!realTimeEnabled)}
+                >
+                  {realTimeEnabled ? (
+                    <>
+                      <Radio className="w-4 h-4 mr-1.5 animate-pulse" />
+                      <span className="flex items-center gap-1.5">
+                        <span>LIVE</span>
+                        {(historyFetching || summaryFetching) && (
+                          <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse"></div>
+                        )}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <WifiOff className="w-4 h-4 mr-1.5" />
+                      <span>Live</span>
+                    </>
+                  )}
+                </Button>
+              )}
+              
               {/* Last Sync Indicator */}
               <div className="hidden md:flex items-center gap-2 px-3 py-1.5 bg-slate-800/50 rounded-lg border border-slate-700/50">
                 <div className={`w-1.5 h-1.5 rounded-full ${lastSyncTime < 5 ? 'bg-emerald-500' : lastSyncTime < 15 ? 'bg-yellow-500' : 'bg-slate-500'} ${lastSyncTime < 5 ? 'animate-pulse' : ''}`}></div>
@@ -463,6 +507,17 @@ export function PortfolioChart({ selectedPeriod, onPeriodChange, mode }: Portfol
 
         {/* Chart with enhanced features */}
         <div className="relative rounded-xl overflow-hidden border border-slate-700/30 bg-slate-900/50">
+          {/* Real-Time Indicator Overlay */}
+          {realTimeEnabled && isRealTimeAvailable && (
+            <div className="absolute top-3 right-3 z-10 flex items-center gap-2 px-2.5 py-1 bg-cyan-500/20 border border-cyan-500/30 rounded-lg backdrop-blur-sm">
+              <Radio className="w-3 h-3 text-cyan-400 animate-pulse" />
+              <span className="text-xs text-cyan-400 font-medium">LIVE</span>
+              {(historyFetching || summaryFetching) && (
+                <div className="w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse"></div>
+              )}
+            </div>
+          )}
+          
           {/* Chart */}
           <div className="px-4 pt-4 pb-4">
             <ResponsiveContainer width="100%" height={360}>
@@ -518,6 +573,9 @@ export function PortfolioChart({ selectedPeriod, onPeriodChange, mode }: Portfol
                   }`}
                 >
                   {period}
+                  {period === "1D" && realTimeEnabled && (
+                    <div className="ml-1.5 w-1.5 h-1.5 bg-cyan-400 rounded-full animate-pulse"></div>
+                  )}
                 </Button>
               ))}
             </div>

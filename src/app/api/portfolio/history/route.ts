@@ -147,11 +147,18 @@ export async function GET(req: NextRequest) {
     } else if (grouped[dateKey]) {
       // Use actual snapshot data if available
       const item = grouped[dateKey];
+      const initialInvestment = item.totalValue - item.totalPL;
+      // Calculate plPercent, handling division by zero and NaN
+      let plPercent = 0;
+      if (Math.abs(initialInvestment) > 0.01) {
+        const calculated = (item.totalPL / initialInvestment) * 100;
+        plPercent = isFinite(calculated) ? calculated : 0;
+      }
       history.push({
         date: dateKey,
         value: item.totalValue,
         pl: item.totalPL,
-        plPercent: item.totalValue > 0 ? (item.totalPL / (item.totalValue - item.totalPL)) * 100 : 0,
+        plPercent,
       });
     } else {
       // Date is after join but no snapshot exists
@@ -163,11 +170,18 @@ export async function GET(req: NextRequest) {
       for (let i = snapshotDates.length - 1; i >= 0; i--) {
         if (snapshotDates[i] <= dateKey) {
           const item = grouped[snapshotDates[i]];
+          const initialInvestment = item.totalValue - item.totalPL;
+          // Calculate plPercent, handling division by zero and NaN
+          let plPercent = 0;
+          if (Math.abs(initialInvestment) > 0.01) {
+            const calculated = (item.totalPL / initialInvestment) * 100;
+            plPercent = isFinite(calculated) ? calculated : 0;
+          }
           history.push({
             date: dateKey,
             value: item.totalValue,
             pl: item.totalPL,
-            plPercent: item.totalValue > 0 ? (item.totalPL / (item.totalValue - item.totalPL)) * 100 : 0,
+            plPercent,
           });
           foundSnapshot = true;
           break;

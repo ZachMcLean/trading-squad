@@ -10,7 +10,7 @@ import type {
 
 // ===== PORTFOLIO SUMMARY =====
 
-export function usePortfolioSummary() {
+export function usePortfolioSummary(realTime?: boolean) {
   return useQuery<PortfolioSummary>({
     queryKey: ["portfolio", "summary"],
     queryFn: async () => {
@@ -21,7 +21,9 @@ export function usePortfolioSummary() {
       }
       return res.json();
     },
-    staleTime: 30 * 1000, // 30 seconds
+    staleTime: realTime ? 0 : 30 * 1000, // No stale time for real-time, 30 seconds otherwise
+    refetchInterval: realTime ? 30 * 1000 : false, // Poll every 30 seconds for real-time
+    refetchIntervalInBackground: realTime, // Continue polling in background
   });
 }
 
@@ -44,7 +46,7 @@ export function usePortfolioAccounts() {
 
 // ===== PORTFOLIO HISTORY =====
 
-export function usePortfolioHistory(period: string, accountId?: string) {
+export function usePortfolioHistory(period: string, accountId?: string, realTime?: boolean) {
   return useQuery<PortfolioHistoryResponse>({
     queryKey: ["portfolio", "history", period, accountId],
     queryFn: async () => {
@@ -58,7 +60,9 @@ export function usePortfolioHistory(period: string, accountId?: string) {
       }
       return res.json();
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes - historical data doesn't change often
+    staleTime: realTime ? 0 : 5 * 60 * 1000, // No stale time for real-time, 5 min for historical
+    refetchInterval: realTime && period === "1D" ? 30 * 1000 : false, // Poll every 30 seconds for 1D real-time
+    refetchIntervalInBackground: realTime && period === "1D", // Continue polling in background
   });
 }
 

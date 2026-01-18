@@ -5,7 +5,7 @@
  * Central hub for discovering communities and managing your squads
  */
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Search, Plus, Users, Lock, Globe, TrendingUp, Award, MessageSquare, Filter, ArrowRight } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { CreateWorkspaceDialog } from "@/components/create-workspace-dialog";
 
 interface Workspace {
   id: string;
@@ -39,14 +40,44 @@ interface Workspace {
 export default function WorkspacesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
+  const [myWorkspaces, setMyWorkspaces] = useState<Workspace[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // TODO: Fetch from API
-  // const { data: myWorkspaces } = useQuery(['my-workspaces'], () => fetch('/api/workspaces?filter=my').then(r => r.json()));
-  const myWorkspaces: Workspace[] = [];
+  useEffect(() => {
+    fetchWorkspaces();
+  }, []);
 
-  // TODO: Fetch from API
-  // const { data: recommendedWorkspaces } = useQuery(['recommended-workspaces'], () => fetch('/api/workspaces?filter=recommended').then(r => r.json()));
-  const recommendedWorkspaces: Workspace[] = [];
+  const fetchWorkspaces = async () => {
+    try {
+      const response = await fetch('/api/workspace');
+      const data = await response.json();
+      
+      // Transform API response to match Workspace interface
+      const transformed = data.workspaces?.map((w: any) => ({
+        id: w.id,
+        name: w.name,
+        description: w.description || "No description",
+        type: w.type,
+        memberCount: w.memberCount || 0,
+        maxMembers: 100, // Default max
+        avgReturn: 0, // TODO: Calculate from member data
+        activeChallenges: 0, // TODO: Fetch from challenges API
+        messagesToday: 0, // TODO: Fetch from activity API
+        isActive: w.isActive || false,
+        isMember: true, // User is always a member of their workspaces
+        category: "Trading Squad",
+        avatarColor: "from-purple-500 to-pink-500",
+      })) || [];
+      
+      setMyWorkspaces(transformed);
+    } catch (error) {
+      console.error('Error fetching workspaces:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const recommendedWorkspaces: Workspace[] = []; // TODO: Implement recommended workspaces
 
   const WorkspaceCard = ({ workspace }: { workspace: Workspace }) => {
     const getTypeIcon = () => {
@@ -152,10 +183,7 @@ export default function WorkspacesPage() {
           <h1 className="text-slate-100 mb-1">Workspaces</h1>
           <p className="text-slate-400">Discover and join trading communities</p>
         </div>
-        <Button className="bg-gradient-to-r from-cyan-500 to-purple-500 hover:from-cyan-600 hover:to-purple-600 shadow-lg shadow-cyan-500/20">
-          <Plus className="w-4 h-4 mr-2" />
-          Create Workspace
-        </Button>
+        <CreateWorkspaceDialog onWorkspaceCreated={fetchWorkspaces} />
       </div>
 
       {/* Search & Filters */}
@@ -201,7 +229,11 @@ export default function WorkspacesPage() {
 
         {/* My Workspaces */}
         <TabsContent value="my-workspaces" className="space-y-6 mt-6">
-          {myWorkspaces.length > 0 ? (
+          {loading ? (
+            <Card className="border-slate-700 bg-slate-900/50 p-12 text-center">
+              <p className="text-slate-400">Loading workspaces...</p>
+            </Card>
+          ) : myWorkspaces.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
               {myWorkspaces.map((workspace) => (
                 <WorkspaceCard key={workspace.id} workspace={workspace} />
@@ -214,10 +246,7 @@ export default function WorkspacesPage() {
               <p className="text-slate-500 mb-6">
                 Create your first workspace or join an existing community
               </p>
-              <Button className="bg-gradient-to-r from-cyan-500 to-purple-500">
-                <Plus className="w-4 h-4 mr-2" />
-                Create Workspace
-              </Button>
+              <CreateWorkspaceDialog onWorkspaceCreated={fetchWorkspaces} />
             </Card>
           )}
         </TabsContent>

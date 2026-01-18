@@ -28,10 +28,14 @@ export function WatchlistManager() {
   const fetchWatchlist = async () => {
     try {
       const response = await fetch('/api/watchlist');
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
       const data = await response.json();
-      setWatchlist(data.watchlist);
+      setWatchlist(data.watchlist || []);
     } catch (error) {
       console.error('Error fetching watchlist:', error);
+      setWatchlist([]); // Set to empty array on error
     } finally {
       setLoading(false);
     }

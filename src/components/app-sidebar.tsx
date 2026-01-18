@@ -26,7 +26,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 
-export type PageId = "portfolio" | "squad-dashboard" | "news" | "algorithm" | "challenges" | "terminal" | "chat" | "workspaces";
+export type PageId = "portfolio" | "squad-dashboard" | "news" | "algorithm" | "challenges" | "terminal" | "chat" | "workspaces" | "watchlist" | "settings";
 
 interface AppSidebarProps {
   currentPage: PageId;
@@ -104,6 +104,13 @@ export function AppSidebar({
       icon: TrendingUp,
       color: "cyan",
       description: "Charts & technical analysis",
+    },
+    {
+      id: "watchlist",
+      label: "Watchlist",
+      icon: Sparkles,
+      color: "cyan",
+      description: "Track stocks you're watching",
     },
     {
       id: "chat",
@@ -205,6 +212,20 @@ export function AppSidebar({
             {workspaces.filter(w => w.isActive).length > 0 && (
               <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             )}
+          </button>
+
+          <button
+            onClick={() => onPageChange("settings")}
+            className={`
+              w-full flex items-center gap-3 px-4 py-3 rounded-lg transition-all
+              ${currentPage === "settings"
+                ? 'bg-cyan-500/20 border-l-2 border-cyan-400 text-cyan-400'
+                : 'text-slate-400 hover:bg-slate-800/50 hover:text-slate-300'
+              }
+            `}
+          >
+            <Settings className="w-5 h-5" />
+            <span className="text-sm">Settings</span>
           </button>
 
           {onStartTour && (

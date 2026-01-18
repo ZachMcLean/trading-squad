@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AppSidebar, type PageId } from "@/components/app-sidebar";
 import { WorkspaceContext, getDefaultSoloContext, isSoloMode } from "@/lib/workspace-context";
@@ -20,10 +20,31 @@ export default function DashboardLayout({
   const [currentContext, setCurrentContext] = useState<WorkspaceContext>(
     getDefaultSoloContext()
   );
+  const [workspaces, setWorkspaces] = useState<WorkspaceContext[]>([]);
 
-  // TODO: Fetch workspaces from API
-  // const { data: workspaces } = useQuery(['workspaces'], () => fetch('/api/workspaces').then(r => r.json()));
-  const [workspaces] = useState<WorkspaceContext[]>([]);
+  // Fetch workspaces on mount
+  useEffect(() => {
+    fetchWorkspaces();
+  }, []);
+
+  const fetchWorkspaces = async () => {
+    try {
+      const response = await fetch('/api/workspace');
+      const data = await response.json();
+      
+      const transformed = data.workspaces?.map((w: any) => ({
+        id: w.id,
+        name: w.name,
+        type: w.type.toLowerCase(),
+        memberCount: w.memberCount || 0,
+        isActive: w.isActive || false,
+      })) || [];
+      
+      setWorkspaces(transformed);
+    } catch (error) {
+      console.error('Error fetching workspaces:', error);
+    }
+  };
 
   // Map pathname to PageId
   const getCurrentPage = (): PageId => {
@@ -34,6 +55,8 @@ export default function DashboardLayout({
     if (pathname.startsWith("/challenges")) return "challenges";
     if (pathname.startsWith("/terminal")) return "terminal";
     if (pathname.startsWith("/chat")) return "chat";
+    if (pathname.startsWith("/watchlist")) return "watchlist";
+    if (pathname.startsWith("/settings")) return "settings";
     if (pathname.startsWith("/workspaces")) return "workspaces";
     return "portfolio";
   };
@@ -61,8 +84,14 @@ export default function DashboardLayout({
       case "terminal":
         router.push("/terminal");
         break;
+      case "watchlist":
+        router.push("/watchlist");
+        break;
       case "chat":
         router.push("/chat");
+        break;
+      case "settings":
+        router.push("/settings");
         break;
       case "workspaces":
         router.push("/workspaces");
@@ -132,6 +161,16 @@ export default function DashboardLayout({
         return {
           title: "Squad Chat",
           description: "Team messaging",
+        };
+      case "watchlist":
+        return {
+          title: "Watchlist",
+          description: "Track stocks you're interested in",
+        };
+      case "settings":
+        return {
+          title: "Settings",
+          description: "Manage your privacy and preferences",
         };
       case "workspaces":
         return {

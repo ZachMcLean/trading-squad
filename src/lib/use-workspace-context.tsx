@@ -1,5 +1,15 @@
 "use client";
 
+/**
+ * Workspace Context Provider
+ * 
+ * SOLO-FIRST APPROACH:
+ * - App defaults to solo mode (personal portfolio)
+ * - Users can use all features without joining a workspace
+ * - Workspaces/squads are opt-in - user must manually switch
+ * - Never auto-select workspaces, even if user has them
+ */
+
 import { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import { WorkspaceContext as WorkspaceContextType, getDefaultSoloContext } from "./workspace-context";
 
@@ -15,6 +25,7 @@ const WorkspaceContext = createContext<WorkspaceContextValue | undefined>(
 );
 
 export function WorkspaceProvider({ children }: { children: ReactNode }) {
+  // Always start in solo mode - never auto-select workspaces
   const [currentContext, setCurrentContext] = useState<WorkspaceContextType>(
     getDefaultSoloContext()
   );
@@ -25,13 +36,12 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     fetchWorkspaces();
   }, []);
 
-  // Auto-select first workspace if user has workspaces and is in solo mode
+  // Keep user in solo mode by default - they can manually switch to workspaces
+  // This ensures the app is solo-first
   useEffect(() => {
     if (workspaces.length > 0 && currentContext.type === "solo") {
-      console.log("WorkspaceProvider - auto-selecting first workspace:", workspaces[0]);
-      // Optionally auto-select the first workspace
-      // Uncomment to enable auto-selection:
-      // setCurrentContext(workspaces[0]);
+      console.log("WorkspaceProvider - user has workspaces but staying in solo mode (solo-first approach)");
+      // Never auto-select workspaces - user must manually switch
     }
   }, [workspaces, currentContext.type]);
 

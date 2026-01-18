@@ -20,13 +20,15 @@ import {
   Flame,
   Users,
   User,
-  Sparkles
+  Sparkles,
+  Plus
 } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { useWorkspaceContext } from "@/lib/use-workspace-context";
 
 interface ActivityItem {
   id: string;
@@ -48,6 +50,11 @@ interface ActivityItem {
 export function PersonalActivityFeed() {
   // Mock current user
   const currentUsername = "FlippinPsycho98";
+  
+  // Get workspace context to filter squad activities
+  const { currentContext, workspaces } = useWorkspaceContext();
+  const isSoloMode = currentContext.type === "solo";
+  const hasWorkspaces = workspaces.length > 0;
 
   // Consolidated feed: personal activities + all squad activities
   const activities: ActivityItem[] = [
@@ -199,9 +206,18 @@ export function PersonalActivityFeed() {
     },
   ];
 
+  // Filter activities based on mode - only show squad activities if in workspace mode or has workspaces
+  const visibleActivities = activities.filter(activity => {
+    // Always show personal activities
+    if (activity.isPersonal) return true;
+    // Only show squad activities if user has workspaces
+    if (activity.squadName) return hasWorkspaces;
+    return true;
+  });
+  
   // Count stats
-  const personalActivityCount = activities.filter(a => a.isPersonal).length;
-  const squadActivityCount = activities.filter(a => a.squadName).length;
+  const personalActivityCount = visibleActivities.filter(a => a.isPersonal).length;
+  const squadActivityCount = visibleActivities.filter(a => a.squadName).length;
 
   // Helper function to get avatar initials
   const getInitials = (username: string) => {
@@ -264,8 +280,32 @@ export function PersonalActivityFeed() {
 
       {/* Activity List */}
       <ScrollArea className="flex-1">
-        <div className="p-3 sm:p-4 space-y-3">
-          {activities.map((activity) => {
+        {visibleActivities.length === 0 ? (
+          <div className="p-6 text-center space-y-4">
+            <div className="w-16 h-16 mx-auto rounded-full bg-slate-800/50 flex items-center justify-center">
+              <Activity className="w-8 h-8 text-slate-600" />
+            </div>
+            <div className="space-y-2">
+              <p className="text-slate-400 text-sm">No activity yet</p>
+              <p className="text-slate-500 text-xs">
+                Your portfolio activity will appear here as you make trades
+              </p>
+            </div>
+            {!hasWorkspaces && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="border-purple-500/30 text-purple-400 hover:bg-purple-500/10 mt-4"
+                onClick={() => window.location.href = '/workspaces'}
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Join a Squad
+              </Button>
+            )}
+          </div>
+        ) : (
+          <div className="p-3 sm:p-4 space-y-3">
+            {visibleActivities.map((activity) => {
             const isPersonal = activity.isPersonal || activity.username === currentUsername;
             
             return (
@@ -368,14 +408,25 @@ export function PersonalActivityFeed() {
               </div>
             );
           })}
-        </div>
+          </div>
+        )}
       </ScrollArea>
 
       {/* Footer Summary */}
       <div className="p-3 border-t border-slate-700/50 bg-slate-900/50">
         <p className="text-xs text-slate-400 text-center">
-          Showing activity from <span className="text-emerald-400 font-medium">your portfolio</span> and{" "}
-          <span className="text-purple-400 font-medium">2 squads</span>
+          {squadActivityCount > 0 ? (
+            <>
+              Showing activity from <span className="text-emerald-400 font-medium">your portfolio</span> and{" "}
+              <span className="text-purple-400 font-medium">
+                {squadActivityCount === 1 ? "1 squad" : `${Math.floor(squadActivityCount / 2)} squads`}
+              </span>
+            </>
+          ) : (
+            <>
+              Showing <span className="text-emerald-400 font-medium">your portfolio</span> activity
+            </>
+          )}
         </p>
       </div>
     </Card>

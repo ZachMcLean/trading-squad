@@ -2,7 +2,11 @@
 
 /**
  * My Portfolio - Multi-Account Portfolio Dashboard
- * Comprehensive tracking across all brokerage accounts with advanced analytics
+ * 
+ * This is the SOLO-FOCUSED personal dashboard - users can use the app
+ * without joining any workspaces. Workspace/squad features are opt-in.
+ * 
+ * Comprehensive tracking across all brokerage accounts with advanced analytics.
  */
 
 import { useState } from "react";

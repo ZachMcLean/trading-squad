@@ -81,6 +81,40 @@ export const SyncResponseSchema = z.object({
   jobId: z.string().optional(),
 });
 
+// ===== SQUAD/WORKSPACE SCHEMAS =====
+
+export const SquadMemberHistorySchema = z.object({
+  memberId: z.string(),
+  memberName: z.string(),
+  privacyLevel: z.enum(["full", "partial", "hidden"]),
+  history: z.array(z.object({
+    date: z.string(),
+    percentChange: z.number(),
+  })),
+});
+
+export const SquadHistoryResponseSchema = z.object({
+  squadAverage: z.array(z.object({
+    date: z.string(),
+    percentChange: z.number(),
+  })),
+  squadTotal: z.array(z.object({
+    date: z.string(),
+    value: z.number(),
+  })),
+  members: z.array(SquadMemberHistorySchema),
+  yourHistory: z.array(z.object({
+    date: z.string(),
+    value: z.number(),
+    percentChange: z.number(),
+  })),
+  metadata: z.object({
+    totalMembers: z.number(),
+    visibleMembers: z.number(),
+    hiddenMembers: z.number(),
+  }),
+});
+
 // ===== TYPE INFERENCE =====
 
 export type TimePeriod = z.infer<typeof TimePeriodSchema>;
@@ -93,4 +127,6 @@ export type PortfolioHistoryPoint = z.infer<typeof PortfolioHistoryPointSchema>;
 export type PortfolioHistoryResponse = z.infer<typeof PortfolioHistoryResponseSchema>;
 export type AccountsResponse = z.infer<typeof AccountsResponseSchema>;
 export type SyncResponse = z.infer<typeof SyncResponseSchema>;
+export type SquadMemberHistory = z.infer<typeof SquadMemberHistorySchema>;
+export type SquadHistoryResponse = z.infer<typeof SquadHistoryResponseSchema>;
 

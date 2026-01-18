@@ -6,6 +6,7 @@ import type {
   AccountsResponse,
   SyncRequest,
   SyncResponse,
+  SquadHistoryResponse,
 } from "@/lib/validations/portfolio";
 
 // ===== PORTFOLIO SUMMARY =====
@@ -90,6 +91,38 @@ export function useSyncPortfolio() {
       // Invalidate all portfolio queries to refetch fresh data
       queryClient.invalidateQueries({ queryKey: ["portfolio"] });
     },
+  });
+}
+
+// ===== SQUAD PORTFOLIO HISTORY =====
+
+export function useSquadHistory(
+  workspaceId: string | null | undefined,
+  period: string,
+  realTime?: boolean
+) {
+  return useQuery<SquadHistoryResponse>({
+    queryKey: ["squad", workspaceId, "history", period],
+    queryFn: async () => {
+      if (!workspaceId) {
+        throw new Error("No workspace ID provided");
+      }
+      
+      const params = new URLSearchParams({ period });
+      const res = await fetch(
+        `/api/workspaces/${workspaceId}/portfolio/history?${params}`
+      );
+      
+      if (!res.ok) {
+        const error = await res.json().catch(() => ({ error: "Failed to fetch squad history" }));
+        throw new Error(error.error || "Failed to fetch squad history");
+      }
+      
+      return res.json();
+    },
+    enabled: !!workspaceId, // Only run query if workspaceId exists
+    staleTime: realTime ? 0 : 5 * 60 * 1000,
+    refetchInterval: realTime && period === "1D" ? 30 * 1000 : false,
   });
 }
 

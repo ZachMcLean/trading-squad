@@ -25,6 +25,16 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
     fetchWorkspaces();
   }, []);
 
+  // Auto-select first workspace if user has workspaces and is in solo mode
+  useEffect(() => {
+    if (workspaces.length > 0 && currentContext.type === "solo") {
+      console.log("WorkspaceProvider - auto-selecting first workspace:", workspaces[0]);
+      // Optionally auto-select the first workspace
+      // Uncomment to enable auto-selection:
+      // setCurrentContext(workspaces[0]);
+    }
+  }, [workspaces, currentContext.type]);
+
   const fetchWorkspaces = async () => {
     try {
       const response = await fetch('/api/workspace');
@@ -38,6 +48,7 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
         isActive: w.isActive || false,
       })) || [];
       
+      console.log("WorkspaceProvider - fetched workspaces:", transformed);
       setWorkspaces(transformed);
     } catch (error) {
       console.error('Error fetching workspaces:', error);

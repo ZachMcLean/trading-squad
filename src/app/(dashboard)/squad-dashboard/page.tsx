@@ -9,7 +9,7 @@ import { useState } from "react";
 import { useWorkspaceContext } from "@/lib/use-workspace-context";
 import type { TimePeriod } from "@/lib/workspace-context";
 import { InfoPills } from "@/components/info-pills";
-import { PortfolioChart } from "@/components/portfolio-chart";
+import { SquadPortfolioChart } from "@/components/squad-portfolio-chart";
 import { TeamPortfolios } from "@/components/team-portfolios";
 import { ActivityFeed } from "@/components/activity-feed";
 
@@ -17,13 +17,21 @@ export default function SquadDashboardPage() {
   const { currentContext } = useWorkspaceContext();
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>("6M");
 
+  // Get workspace ID from context (if not in solo mode)
+  const workspaceId = currentContext.type !== "solo" ? currentContext.id : null;
+
   return (
     <>
       <InfoPills />
       
       <div className="px-4 sm:px-6 py-4 space-y-6">
-        {/* Portfolio Chart */}
-        <PortfolioChart selectedPeriod={selectedPeriod} onPeriodChange={setSelectedPeriod} />
+        {/* Squad Portfolio Chart with Privacy-Aware Features */}
+        <SquadPortfolioChart 
+          workspaceId={workspaceId}
+          selectedPeriod={selectedPeriod} 
+          onPeriodChange={setSelectedPeriod}
+          userPrivacyLevel="full" // TODO: Get from user settings
+        />
         
         {/* Two Column Layout: Team Portfolios (2/3) + Activity Feed (1/3) */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">

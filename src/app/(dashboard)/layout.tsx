@@ -1,14 +1,15 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { AppSidebar, type PageId } from "@/components/app-sidebar";
-import { WorkspaceContext, getDefaultSoloContext, isSoloMode } from "@/lib/workspace-context";
+import { isSoloMode } from "@/lib/workspace-context";
 import { WorkspaceHeader } from "@/components/workspace-header";
-import { WorkspaceProvider } from "@/lib/use-workspace-context";
+import { WorkspaceProvider, useWorkspaceContext } from "@/lib/use-workspace-context";
 import { BottomNavigation } from "@/components/bottom-navigation";
 
-export default function DashboardLayout({
+// Inner component that uses the context
+function DashboardLayoutInner({
   children,
 }: {
   children: React.ReactNode;
@@ -16,35 +17,8 @@ export default function DashboardLayout({
   const pathname = usePathname();
   const router = useRouter();
 
-  // Default to Solo Mode
-  const [currentContext, setCurrentContext] = useState<WorkspaceContext>(
-    getDefaultSoloContext()
-  );
-  const [workspaces, setWorkspaces] = useState<WorkspaceContext[]>([]);
-
-  // Fetch workspaces on mount
-  useEffect(() => {
-    fetchWorkspaces();
-  }, []);
-
-  const fetchWorkspaces = async () => {
-    try {
-      const response = await fetch('/api/workspace');
-      const data = await response.json();
-      
-      const transformed = data.workspaces?.map((w: any) => ({
-        id: w.id,
-        name: w.name,
-        type: w.type.toLowerCase(),
-        memberCount: w.memberCount || 0,
-        isActive: w.isActive || false,
-      })) || [];
-      
-      setWorkspaces(transformed);
-    } catch (error) {
-      console.error('Error fetching workspaces:', error);
-    }
-  };
+  // Use the shared workspace context
+  const { currentContext, setCurrentContext, workspaces } = useWorkspaceContext();
 
   // Map pathname to PageId
   const getCurrentPage = (): PageId => {
@@ -100,7 +74,8 @@ export default function DashboardLayout({
   };
 
   // Handle workspace context changes
-  const handleContextChange = (context: WorkspaceContext) => {
+  const handleContextChange = (context: typeof currentContext) => {
+    console.log("Layout - switching context to:", context);
     setCurrentContext(context);
     // If switching to workspace and on portfolio, switch to squad dashboard
     if (context.type !== "solo" && currentPage === "portfolio") {
@@ -188,31 +163,42 @@ export default function DashboardLayout({
   const pageMetadata = getPageMetadata();
 
   return (
-    <WorkspaceProvider>
-      <div className="min-h-screen bg-slate-950">
-        {/* Sidebar */}
-        <AppSidebar
-          currentPage={currentPage}
-          onPageChange={handlePageChange}
-          currentContext={currentContext}
-          workspaces={workspaces}
-          onContextChange={handleContextChange}
-          onBrowseWorkspaces={handleBrowseWorkspaces}
-          onCreateWorkspace={handleCreateWorkspace}
+    <div className="min-h-screen bg-slate-950">
+      {/* Sidebar */}
+      <AppSidebar
+        currentPage={currentPage}
+        onPageChange={handlePageChange}
+        currentContext={currentContext}
+        workspaces={workspaces}
+        onContextChange={handleContextChange}
+        onBrowseWorkspaces={handleBrowseWorkspaces}
+        onCreateWorkspace={handleCreateWorkspace}
+      />
+
+      {/* Main Content */}
+      <main className="lg:ml-64 min-h-screen">
+        <WorkspaceHeader
+          pageTitle={pageMetadata.title}
+          pageDescription={pageMetadata.description}
         />
+        <div className="pb-20 lg:pb-0">{children}</div>
+      </main>
 
-        {/* Main Content */}
-        <main className="lg:ml-64 min-h-screen">
-          <WorkspaceHeader
-            pageTitle={pageMetadata.title}
-            pageDescription={pageMetadata.description}
-          />
-          <div className="pb-20 lg:pb-0">{children}</div>
-        </main>
+      {/* Bottom Navigation - Mobile only */}
+      <BottomNavigation />
+    </div>
+  );
+}
 
-        {/* Bottom Navigation - Mobile only */}
-        <BottomNavigation />
-      </div>
+// Outer component that provides the context
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <WorkspaceProvider>
+      <DashboardLayoutInner>{children}</DashboardLayoutInner>
     </WorkspaceProvider>
   );
 }

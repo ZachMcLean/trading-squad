@@ -12,8 +12,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  AreaChart,
-  Area,
   LineChart,
   Line,
   XAxis,
@@ -38,11 +36,14 @@ import {
   Radio,
   WifiOff,
   ArrowRight,
+  Target,
+  Link2,
+  Flag,
 } from "lucide-react";
 import { useSquadHistory, useSyncPortfolio } from "@/hooks/use-portfolio";
 
 type TimePeriod = "1D" | "1W" | "1M" | "3M" | "6M" | "1Y" | "YTD";
-type ChartView = "you-vs-squad" | "squad-total" | "all-members";
+type ChartView = "you-vs-squad" | "all-members";
 
 interface SquadPortfolioChartProps {
   workspaceId: string | null | undefined;
@@ -152,13 +153,6 @@ export function SquadPortfolioChart({
           rawDate: point.date,
         }));
 
-      case "squad-total":
-        return data.squadTotal.map((point) => ({
-          date: formatDate(point.date),
-          value: point.value,
-          rawDate: point.date,
-        }));
-
       case "all-members":
         // Flatten all visible member histories
         const dates = data.squadAverage.map((p) => p.date);
@@ -195,6 +189,25 @@ export function SquadPortfolioChart({
   const squadReturn = data?.squadAverage.at(-1)?.percentChange ?? 0;
   const outperformance = yourReturn - squadReturn;
   const squadTotalValue = data?.squadTotal.at(-1)?.value ?? 0;
+  
+  // Squad goals and milestones
+  const goal = 500000; // Squad goal
+  const goalProgress = squadTotalValue > 0 ? (squadTotalValue / goal) * 100 : 0;
+  const nextMilestone = 500000;
+  const toMilestone = Math.max(0, nextMilestone - squadTotalValue);
+  
+  // S&P500 comparison (mock data - would need external API)
+  const sp500Returns: { [key in TimePeriod]: number } = {
+    "1D": 0.15,
+    "1W": 1.2,
+    "1M": 2.8,
+    "3M": 6.4,
+    "6M": 12.4,
+    "1Y": 18.9,
+    "YTD": 10.2,
+  };
+  const sp500Return = sp500Returns[selectedPeriod];
+  const vsSP500 = squadReturn - sp500Return;
 
   // Determine if "All Members" view is available
   const canShowAllMembers =
@@ -300,159 +313,127 @@ export function SquadPortfolioChart({
   return (
     <Card className="border-slate-700/50 bg-gradient-to-b from-slate-800/40 via-slate-900/40 to-slate-800/40 backdrop-blur-sm">
       <div className="p-5 space-y-4">
-        {/* Header: Performance Summary */}
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div className="space-y-3 flex-1 min-w-0">
-            {/* Main Performance Comparison */}
-            <div className="flex items-center gap-4 flex-wrap">
-              <div>
-                <div className="flex items-center gap-2 text-sm text-slate-400">
-                  <User className="w-4 h-4" />
-                  <span>Your Return</span>
-                </div>
-                <div
-                  className={`text-2xl sm:text-3xl tabular-nums font-semibold ${
-                    yourReturn >= 0 ? "text-emerald-400" : "text-red-400"
-                  }`}
-                >
-                  {yourReturn >= 0 ? "+" : ""}
-                  {yourReturn.toFixed(2)}%
-                </div>
-              </div>
-
-              <div className="w-px h-12 bg-slate-700 hidden sm:block" />
-
-              <div>
-                <div className="flex items-center gap-2 text-sm text-slate-400">
-                  <Users className="w-4 h-4" />
-                  <span>Squad Avg</span>
-                </div>
-                <div
-                  className={`text-2xl sm:text-3xl tabular-nums font-semibold ${
-                    squadReturn >= 0 ? "text-emerald-400" : "text-red-400"
-                  }`}
-                >
-                  {squadReturn >= 0 ? "+" : ""}
-                  {squadReturn.toFixed(2)}%
-                </div>
-              </div>
-
-              <div className="w-px h-12 bg-slate-700 hidden lg:block" />
-
-              {/* Outperformance Badge */}
-              <div
-                className={`px-3 py-2 rounded-lg border ${
-                  outperformance >= 0
-                    ? "bg-emerald-500/10 border-emerald-500/30"
-                    : "bg-red-500/10 border-red-500/30"
-                }`}
-              >
-                <div className="text-xs text-slate-400">vs Squad</div>
-                <div
-                  className={`flex items-center gap-1 text-lg tabular-nums font-semibold ${
-                    outperformance >= 0 ? "text-emerald-400" : "text-red-400"
-                  }`}
-                >
-                  {outperformance >= 0 ? (
-                    <TrendingUp className="w-4 h-4" />
-                  ) : (
-                    <TrendingDown className="w-4 h-4" />
-                  )}
-                  {outperformance >= 0 ? "+" : ""}
-                  {outperformance.toFixed(1)}%
-                </div>
-              </div>
-            </div>
-
-            {/* Squad Stats */}
-            <div className="flex items-center gap-3 flex-wrap text-sm">
-              <span className="text-slate-400">
-                Squad Total:{" "}
-                <span className="text-white tabular-nums font-medium">
-                  ${squadTotalValue.toLocaleString()}
+        {/* Enhanced Header with Squad Value, Stats, and Actions */}
+        <div className="flex flex-col gap-4">
+          {/* Top Row: Squad Value + Actions */}
+          <div className="flex items-start justify-between gap-3 flex-wrap">
+            <div className="space-y-2 flex-1 min-w-0">
+              <div className="flex items-baseline gap-2 flex-wrap">
+                <span className="text-white text-2xl sm:text-3xl tabular-nums">
+                  ${squadTotalValue.toLocaleString("en-US")}
                 </span>
-              </span>
-              <span className="text-slate-600">•</span>
-              <span className="text-slate-400">
-                {data?.metadata.visibleMembers}/{data?.metadata.totalMembers} members
-                visible
-              </span>
-              {(data?.metadata.hiddenMembers ?? 0) > 0 && (
-                <>
-                  <span className="flex items-center gap-1 text-slate-500">
-                    <Lock className="w-3 h-3" />
-                    {data?.metadata.hiddenMembers} private
+                <span className="text-slate-400 text-xs sm:text-sm">/ ${(goal / 1000).toFixed(0)}K Goal</span>
+              </div>
+              
+              {/* Stats Row 1: Performance Metrics */}
+              <div className="flex items-center gap-2 flex-wrap text-xs sm:text-sm">
+                {/* Squad Return - Most Important Metric */}
+                <div className={`flex items-center gap-1.5 ${squadReturn >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {squadReturn >= 0 ? (
+                    <TrendingUp className="w-4 h-4 flex-shrink-0" />
+                  ) : (
+                    <TrendingDown className="w-4 h-4 flex-shrink-0" />
+                  )}
+                  <span className="font-semibold tabular-nums">
+                    {squadReturn >= 0 ? '+' : ''}{squadReturn.toFixed(2)}%
                   </span>
-                </>
-              )}
-            </div>
-          </div>
-
-          {/* View Toggle & Actions */}
-          <div className="flex flex-col gap-2">
-            {/* View Toggle */}
-            <div className="flex gap-1 bg-slate-800/50 rounded-lg p-1 border border-slate-700/50">
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setChartView("you-vs-squad")}
-                className={`h-8 px-2 sm:px-3 text-xs ${
-                  chartView === "you-vs-squad"
-                    ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/40"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                <User className="w-3.5 h-3.5 sm:mr-1.5" />
-                <span className="hidden sm:inline">You vs Squad</span>
-              </Button>
-
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setChartView("squad-total")}
-                className={`h-8 px-2 sm:px-3 text-xs ${
-                  chartView === "squad-total"
-                    ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/40"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                <Users className="w-3.5 h-3.5 sm:mr-1.5" />
-                <span className="hidden sm:inline">Squad Total</span>
-              </Button>
-
-              <Button
-                size="sm"
-                variant="ghost"
-                onClick={() => setChartView("all-members")}
-                disabled={!canShowAllMembers}
-                className={`h-8 px-2 sm:px-3 text-xs ${
-                  chartView === "all-members"
-                    ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/40"
-                    : !canShowAllMembers
-                    ? "text-slate-600 cursor-not-allowed"
-                    : "text-slate-400 hover:text-white"
-                }`}
-              >
-                {canShowAllMembers ? (
-                  <Eye className="w-3.5 h-3.5 sm:mr-1.5" />
-                ) : (
-                  <EyeOff className="w-3.5 h-3.5 sm:mr-1.5" />
-                )}
-                <span className="hidden sm:inline">All Members</span>
-              </Button>
+                  <span className="text-slate-400 font-normal">({selectedPeriod})</span>
+                </div>
+                
+                <span className="text-slate-600">•</span>
+                
+                {/* Your Performance vs Squad */}
+                <div className={`flex items-center gap-1.5 ${outperformance >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  <span className="text-slate-400">You:</span>
+                  <span className="tabular-nums">
+                    {outperformance >= 0 ? '+' : ''}{outperformance.toFixed(1)}% vs squad
+                  </span>
+                </div>
+                
+                <span className="text-slate-600 hidden md:inline">•</span>
+                
+                {/* vs S&P500 */}
+                <div className={`hidden md:flex items-center gap-1.5 ${vsSP500 >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  <BarChart3 className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="text-slate-400">vs S&P:</span>
+                  <span className="tabular-nums">
+                    {vsSP500 >= 0 ? '+' : ''}{vsSP500.toFixed(1)}%
+                  </span>
+                </div>
+                
+                <span className="text-slate-600 hidden md:inline">•</span>
+                
+                {/* Member visibility status */}
+                <span className="hidden md:inline text-slate-400">
+                  {data?.metadata.visibleMembers}/{data?.metadata.totalMembers} members visible
+                </span>
+              </div>
+              
+              {/* Stats Row 2: Milestone Progress */}
+              <div className="flex items-center gap-2 flex-wrap text-xs sm:text-sm">
+                <div className="flex items-center gap-1.5">
+                  <Target className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />
+                  <span className="text-slate-300">
+                    <span className="text-purple-400 tabular-nums">${(toMilestone / 1000).toFixed(1)}K</span>
+                    <span className="text-slate-400"> to </span>
+                    <span className="text-white tabular-nums">${(nextMilestone / 1000).toFixed(0)}K</span>
+                  </span>
+                </div>
+                
+                <span className="text-slate-600 hidden sm:inline">•</span>
+                
+                <span className="text-xs text-purple-400 hidden sm:inline">Unlock "Half Mil Squad" 💎</span>
+              </div>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex items-center gap-2">
+            {/* Chart View Toggle & Actions */}
+            <div className="flex items-center gap-2 flex-shrink-0">
+              {/* View Toggle */}
+              <div className="flex gap-1 bg-slate-800/50 rounded-lg p-1 border border-slate-700/50">
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setChartView("you-vs-squad")}
+                  className={`h-8 px-2 sm:px-3 text-xs ${
+                    chartView === "you-vs-squad"
+                      ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/40"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  <User className="w-3.5 h-3.5 sm:mr-1.5" />
+                  <span className="hidden sm:inline">You vs Squad</span>
+                </Button>
+
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setChartView("all-members")}
+                  disabled={!canShowAllMembers}
+                  className={`h-8 px-2 sm:px-3 text-xs ${
+                    chartView === "all-members"
+                      ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/40"
+                      : !canShowAllMembers
+                      ? "text-slate-600 cursor-not-allowed"
+                      : "text-slate-400 hover:text-white"
+                  }`}
+                >
+                  {canShowAllMembers ? (
+                    <Eye className="w-3.5 h-3.5 sm:mr-1.5" />
+                  ) : (
+                    <EyeOff className="w-3.5 h-3.5 sm:mr-1.5" />
+                  )}
+                  <span className="hidden sm:inline">All Members</span>
+                </Button>
+              </div>
+              
               {/* Real-Time Toggle (only for 1D period) */}
               {isRealTimeAvailable && (
                 <Button
                   size="sm"
                   variant={realTimeEnabled ? "default" : "outline"}
-                  className={
-                    realTimeEnabled
-                      ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/30"
-                      : "border-slate-600 text-slate-300 hover:text-white hover:bg-slate-700"
+                  className={realTimeEnabled 
+                    ? "bg-cyan-500/20 text-cyan-400 border-cyan-500/30 hover:bg-cyan-500/30" 
+                    : "border-slate-600 text-slate-300 hover:text-white hover:bg-slate-700"
                   }
                   onClick={() => setRealTimeEnabled(!realTimeEnabled)}
                 >
@@ -474,7 +455,7 @@ export function SquadPortfolioChart({
                   )}
                 </Button>
               )}
-
+              
               {/* Sync Button */}
               <Button
                 size="sm"
@@ -501,26 +482,40 @@ export function SquadPortfolioChart({
                     <MoreVertical className="w-4 h-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="w-56 bg-slate-900 border-slate-700"
-                >
+                <DropdownMenuContent align="end" className="w-56 bg-slate-900 border-slate-700">
                   <DropdownMenuItem className="text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer">
                     <Download className="w-4 h-4 mr-2" />
                     Export Squad Report
                   </DropdownMenuItem>
                   <DropdownMenuItem className="text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer">
-                    <Lock className="w-4 h-4 mr-2" />
-                    Privacy Settings
+                    <Link2 className="w-4 h-4 mr-2" />
+                    Connect Broker
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer">
+                    <Flag className="w-4 h-4 mr-2" />
+                    Set Squad Milestone
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-slate-700" />
                   <DropdownMenuItem className="text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer">
+                    <Lock className="w-4 h-4 mr-2" />
+                    Privacy Settings
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="text-slate-300 hover:text-white hover:bg-slate-800 cursor-pointer">
                     <BarChart3 className="w-4 h-4 mr-2" />
-                    View Full Analytics
+                    Squad Analytics
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
+          </div>
+          
+          {/* Progress Bar */}
+          <div className="relative h-1.5 bg-slate-700/30 rounded-full overflow-hidden">
+            <div 
+              className="absolute inset-y-0 left-0 bg-gradient-to-r from-purple-500 to-cyan-500 rounded-full transition-all duration-500"
+              style={{ width: `${goalProgress}%` }}
+            />
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-pulse" />
           </div>
         </div>
 
@@ -610,46 +605,6 @@ export function SquadPortfolioChart({
                     }}
                   />
                 </LineChart>
-              ) : chartView === "squad-total" ? (
-                <AreaChart data={chartData}>
-                  <defs>
-                    <linearGradient id="colorTotal" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.05} />
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.2} />
-                  <XAxis
-                    dataKey="date"
-                    stroke="#64748b"
-                    tick={{ fill: "#94a3b8", fontSize: 11 }}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <YAxis
-                    stroke="#64748b"
-                    tick={{ fill: "#94a3b8", fontSize: 11 }}
-                    tickFormatter={(v) => `$${(v / 1000).toFixed(0)}k`}
-                    axisLine={false}
-                    tickLine={false}
-                  />
-                  <Tooltip content={<TotalTooltip />} />
-                  <Area
-                    type="monotone"
-                    dataKey="value"
-                    name="Squad Total"
-                    stroke="#8b5cf6"
-                    strokeWidth={2.5}
-                    fill="url(#colorTotal)"
-                    dot={false}
-                    activeDot={{
-                      r: 6,
-                      fill: "#8b5cf6",
-                      stroke: "#0f172a",
-                      strokeWidth: 2,
-                    }}
-                  />
-                </AreaChart>
               ) : (
                 /* All Members View */
                 <LineChart data={chartData}>
@@ -811,22 +766,6 @@ function ComparisonTooltip({ active, payload, label }: any) {
             </span>
           </div>
         ))}
-      </div>
-    </div>
-  );
-}
-
-function TotalTooltip({ active, payload, label }: any) {
-  if (!active || !payload?.length) return null;
-
-  return (
-    <div className="bg-slate-900 border border-slate-700 rounded-lg p-3 shadow-xl">
-      <p className="text-slate-400 text-xs mb-2">{label}</p>
-      <div className="flex items-center justify-between gap-4">
-        <span className="text-slate-300 text-sm">Squad Total</span>
-        <span className="text-white font-medium tabular-nums">
-          ${payload[0].value?.toLocaleString()}
-        </span>
       </div>
     </div>
   );

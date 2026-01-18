@@ -7,18 +7,23 @@
 
 import { useState } from "react";
 import { useWorkspaceContext } from "@/lib/use-workspace-context";
+import { useSession } from "@/lib/auth-client";
 import type { TimePeriod } from "@/lib/workspace-context";
 import { InfoPills } from "@/components/info-pills";
 import { SquadPortfolioChart } from "@/components/squad-portfolio-chart";
 import { TeamPortfolios } from "@/components/team-portfolios";
-import { ActivityFeed } from "@/components/activity-feed";
+import { SquadActivityFeed } from "@/components/activity/squad-activity-feed";
 
 export default function SquadDashboardPage() {
   const { currentContext } = useWorkspaceContext();
+  const { data: session } = useSession();
   const [selectedPeriod, setSelectedPeriod] = useState<TimePeriod>("6M");
 
   // Get workspace ID from context (if not in solo mode)
   const workspaceId = currentContext.type !== "solo" ? currentContext.id : null;
+  
+  // Get current user ID from session
+  const currentUserId = session?.user?.id || "";
 
   return (
     <>
@@ -42,7 +47,11 @@ export default function SquadDashboardPage() {
           
           {/* Activity Feed Sidebar - 1/3 width */}
           <div className="lg:col-span-1">
-            <ActivityFeed />
+            <SquadActivityFeed 
+              workspaceId={workspaceId}
+              currentUserId={currentUserId}
+              maxHeight="800px"
+            />
           </div>
         </div>
       </div>

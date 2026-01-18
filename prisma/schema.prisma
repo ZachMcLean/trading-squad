@@ -28,6 +28,7 @@ model Workspace {
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
   
+  activities        WorkspaceActivity[]
   members       WorkspaceMember[]
   watchlist     WorkspaceWatchlist[]
 }
@@ -84,6 +85,9 @@ model User {
   createdAt           DateTime                @default(now())
   updatedAt           DateTime                @updatedAt
 
+  activities          WorkspaceActivity[]
+  activityReactions   ActivityReaction[]
+  activityComments    ActivityComment[]
   accounts            Account[]
   sessions            Session[]
   workspaces          WorkspaceMember[]
@@ -352,3 +356,101 @@ model WorkspaceWatchlist {
   @@index([symbol])
   @@index([addedBy])
 }
+
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+// Activity Feed System
+// ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+enum ActivityType {
+  TRADE_BUY           // Bought shares
+  TRADE_SELL          // Sold shares
+  POSITION_OPENED     // Opened new position
+  POSITION_CLOSED     // Closed position entirely
+  POSITION_INCREASED  // Added to existing position
+  POSITION_DECREASED  // Reduced existing position
+  MILESTONE_ATH       // Portfolio all-time high
+  MILESTONE_VALUE     // Hit value milestone (100K, 250K, etc)
+  MILESTONE_RETURN    // Hit return milestone (50%, 100%, etc)
+  IDEA_SHARED         // Shared a trade idea
+  IDEA_OUTCOME        // Trade idea reached target/stop/expired
+  WATCHLIST_ADD       // Added stock to workspace watchlist
+  ACHIEVEMENT         // Generic achievement unlock
+}
+
+model WorkspaceActivity {
+  id          String       @id @default(cuid())
+  workspaceId String
+  userId      String
+  type        ActivityType
+  
+  // Core data
+  symbol      String?      // Stock symbol (if trade-related)
+  quantity    Float?       // Shares/contracts
+  price       Float?       // Price per share
+  value       Float?       // Total transaction value
+  
+  // Context
+  message     String?      @db.Text  // User's comment/note
+  metadata    Json?        // Additional data (position %, gain/loss, etc)
+  
+  // Privacy
+  visibility  String       @default("workspace") // "workspace" | "private"
+  
+  // Engagement
+  reactions   ActivityReaction[]
+  comments    ActivityComment[]
+  
+  // Timestamps
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  
+  // Relations
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([workspaceId, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([workspaceId, type, createdAt(sort: Desc)])
+  @@index([symbol, createdAt(sort: Desc)])
+}
+
+model ActivityReaction {
+  id         String           @id @default(cuid())
+  activityId String
+  userId     String
+  emoji      String           // "👍" | "🔥" | "🎉" | "👏" | "💯" | "🤔"
+  
+  createdAt  DateTime         @default(now())
+  
+  activity   WorkspaceActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@unique([activityId, userId, emoji])
+  @@index([activityId])
+  @@index([userId])
+}
+
+model ActivityComment {
+  id         String           @id @default(cuid())
+  activityId String
+  userId     String
+  content    String           @db.Text
+  
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
+  
+  activity   WorkspaceActivity @relation(fields: [activityId], references: [id], onDelete: Cascade)
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([activityId, createdAt(sort: Desc)])
+  @@index([userId])
+}
+
+
+// Add to Workspace model:
+// 
+
+// Add to User model:
+// activities        WorkspaceActivity[]
+// activityReactions ActivityReaction[]
+// activityComments  ActivityComment[]

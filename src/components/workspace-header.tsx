@@ -16,34 +16,37 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { OmegaLogo } from "@/components/illustrations/OmegaLogo";
 // TODO: Avatar components need to be ported from v11.2
 // import { OmegaPilotAvatar } from "@/components/avatar/OmegaPilotAvatar";
 // import { AvatarCustomizer } from "@/components/avatar/AvatarCustomizer";
 // import { useAvatarConfig } from "@/components/avatar/useAvatarConfig";
 
 interface WorkspaceHeaderProps {
-  pageTitle: string;
+  // Props kept for backward compatibility but not currently used
+  pageTitle?: string;
   pageDescription?: string;
 }
 
-export function WorkspaceHeader({
-  pageTitle,
-  pageDescription,
-}: WorkspaceHeaderProps) {
+export function WorkspaceHeader({}: WorkspaceHeaderProps) {
   // TODO: Re-enable when avatar components are ported
   // const avatarConfig = useAvatarConfig();
 
   return (
-    <div className="flex items-center justify-between px-4 sm:px-6 py-3 sm:py-4 border-b border-slate-700/50 bg-gradient-to-b from-slate-800/30 to-transparent sticky top-0 z-30 backdrop-blur-sm">
-      <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-        <div className="min-w-0 flex-1">
-          <h1 className="text-slate-100">{pageTitle}</h1>
-          {pageDescription && (
-            <p className="text-slate-400 text-sm hidden sm:block truncate">{pageDescription}</p>
-          )}
+    <div className="flex items-center justify-between px-4 sm:px-6 py-4 sm:py-5 border-b border-slate-700/50 bg-gradient-to-b from-slate-800/30 to-transparent sticky top-0 z-30 backdrop-blur-sm">
+      {/* Left: Brand Logo + Name */}
+      <div className="flex items-center gap-2 sm:gap-3">
+        <div className="relative">
+          <div className="absolute inset-0 bg-cyan-500 blur-lg opacity-20 rounded-full" />
+          <OmegaLogo className="relative w-9 h-9 sm:w-10 sm:h-10" />
+        </div>
+        <div>
+          <h1 className="text-slate-100 text-lg sm:text-xl font-semibold leading-tight">TradingSquad</h1>
+          <p className="text-xs text-slate-500 leading-tight hidden sm:block">Cooperative Trading Platform</p>
         </div>
       </div>
 
+      {/* Right: User Actions */}
       <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
         {/* Notifications */}
         <DropdownMenu>

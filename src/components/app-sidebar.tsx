@@ -131,17 +131,8 @@ export function AppSidebar({
 
   return (
     <div className="hidden lg:flex h-screen bg-slate-950/95 border-r border-slate-800 flex-col w-64 fixed left-0 top-0 z-40 backdrop-blur-sm" data-tour="sidebar">
-      {/* Logo Header */}
-      <div className="p-6 pb-4 border-b border-slate-800">
-        <div className="flex items-center gap-3 mb-4">
-          <OmegaLogo className="w-10 h-10" />
-          <div>
-            <h1 className="text-slate-100">Omega Squadron</h1>
-            <p className="text-xs text-slate-500">Trading Platform</p>
-          </div>
-        </div>
-
-        {/* Context Switcher */}
+      {/* Workspace Switcher Header */}
+      <div className="p-6 pb-5 border-b border-slate-800">
         <WorkspaceContextSwitcher
           currentContext={currentContext}
           workspaces={workspaces}

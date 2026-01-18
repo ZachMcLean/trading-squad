@@ -19,6 +19,7 @@ type TimePeriod = "1D" | "1W" | "1M" | "3M" | "6M" | "1Y" | "YTD";
 
 interface TeamPortfoliosProps {
   selectedPeriod: TimePeriod;
+  workspaceName?: string;
 }
 
 interface Position {
@@ -66,7 +67,7 @@ interface Member {
   details: MemberDetails;
 }
 
-export function TeamPortfolios({ selectedPeriod }: TeamPortfoliosProps) {
+export function TeamPortfolios({ selectedPeriod, workspaceName = "Team Omega" }: TeamPortfoliosProps) {
   const [expandedMember, setExpandedMember] = useState<number | null>(null);
   const [viewMode, setViewMode] = useState<"grid" | "list">("list");
   const [searchQuery, setSearchQuery] = useState("");
@@ -392,7 +393,7 @@ export function TeamPortfolios({ selectedPeriod }: TeamPortfoliosProps) {
                 <Trophy className="w-5 h-5 text-white" />
               </div>
               <div>
-                <h3 className="text-white">Team Omega</h3>
+                <h3 className="text-white">{workspaceName}</h3>
                 <p className="text-slate-400 text-sm">Real-time performance tracking</p>
               </div>
               <div className="flex items-center gap-2">

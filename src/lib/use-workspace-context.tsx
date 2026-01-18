@@ -18,22 +18,9 @@ export function WorkspaceProvider({ children }: { children: ReactNode }) {
   const [currentContext, setCurrentContext] = useState<WorkspaceContextType>(
     getDefaultSoloContext()
   );
-  const [workspaces] = useState<WorkspaceContextType[]>([
-    {
-      id: "squad-alpha",
-      name: "Squad Alpha",
-      type: "private",
-      memberCount: 5,
-      isActive: true,
-    },
-    {
-      id: "wsb-traders",
-      name: "WSB Traders",
-      type: "public",
-      memberCount: 1234,
-      isActive: true,
-    },
-  ]);
+  // TODO: Fetch workspaces from API
+  // const { data: workspaces } = useQuery(['workspaces'], () => fetch('/api/workspaces').then(r => r.json()));
+  const [workspaces] = useState<WorkspaceContextType[]>([]);
 
   return (
     <WorkspaceContext.Provider

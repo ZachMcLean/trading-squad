@@ -40,102 +40,13 @@ export default function WorkspacesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
 
-  // Mock data - replace with real data
-  const myWorkspaces: Workspace[] = [
-    {
-      id: "squad-alpha",
-      name: "Squad Alpha",
-      description: "Friends trading together since 2024",
-      type: "private",
-      memberCount: 5,
-      maxMembers: 10,
-      avgReturn: 12.5,
-      activeChallenges: 3,
-      messagesToday: 12,
-      isActive: true,
-      isMember: true,
-      category: "Friends",
-      avatarColor: "from-purple-500 to-pink-500",
-    },
-    {
-      id: "wsb-traders",
-      name: "WSB Traders",
-      description: "YOLO trades and diamond hands 💎🙌",
-      type: "public",
-      memberCount: 1234,
-      maxMembers: 10000,
-      avgReturn: 8.2,
-      activeChallenges: 15,
-      messagesToday: 847,
-      isActive: true,
-      isMember: true,
-      category: "Meme Stocks",
-      avatarColor: "from-emerald-500 to-cyan-500",
-    },
-  ];
+  // TODO: Fetch from API
+  // const { data: myWorkspaces } = useQuery(['my-workspaces'], () => fetch('/api/workspaces?filter=my').then(r => r.json()));
+  const myWorkspaces: Workspace[] = [];
 
-  const recommendedWorkspaces: Workspace[] = [
-    {
-      id: "value-investors",
-      name: "Value Investors",
-      description: "Long-term value investing strategies",
-      type: "public",
-      memberCount: 456,
-      maxMembers: 1000,
-      avgReturn: 15.3,
-      activeChallenges: 8,
-      messagesToday: 34,
-      isActive: true,
-      isMember: false,
-      category: "Value Investing",
-      avatarColor: "from-blue-500 to-indigo-500",
-    },
-    {
-      id: "crypto-degens",
-      name: "Crypto Degens",
-      description: "24/7 crypto trading and degenerate plays",
-      type: "public",
-      memberCount: 789,
-      maxMembers: 2000,
-      avgReturn: 22.7,
-      activeChallenges: 12,
-      messagesToday: 234,
-      isActive: true,
-      isMember: false,
-      category: "Crypto",
-      avatarColor: "from-orange-500 to-red-500",
-    },
-    {
-      id: "tech-stocks",
-      name: "Tech Stock Analysts",
-      description: "Deep dive analysis on tech companies",
-      type: "request",
-      memberCount: 123,
-      maxMembers: 500,
-      avgReturn: 18.9,
-      activeChallenges: 5,
-      messagesToday: 45,
-      isActive: false,
-      isMember: false,
-      category: "Technology",
-      avatarColor: "from-violet-500 to-purple-500",
-    },
-    {
-      id: "day-traders",
-      name: "Day Traders Unite",
-      description: "Active day trading strategies and tips",
-      type: "public",
-      memberCount: 567,
-      maxMembers: 1500,
-      avgReturn: 11.4,
-      activeChallenges: 20,
-      messagesToday: 156,
-      isActive: true,
-      isMember: false,
-      category: "Day Trading",
-      avatarColor: "from-cyan-500 to-blue-500",
-    },
-  ];
+  // TODO: Fetch from API
+  // const { data: recommendedWorkspaces } = useQuery(['recommended-workspaces'], () => fetch('/api/workspaces?filter=recommended').then(r => r.json()));
+  const recommendedWorkspaces: Workspace[] = [];
 
   const WorkspaceCard = ({ workspace }: { workspace: Workspace }) => {
     const getTypeIcon = () => {

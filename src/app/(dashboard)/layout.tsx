@@ -21,23 +21,9 @@ export default function DashboardLayout({
     getDefaultSoloContext()
   );
 
-  // Mock workspaces - Replace with real data from backend
-  const [workspaces] = useState<WorkspaceContext[]>([
-    {
-      id: "squad-alpha",
-      name: "Squad Alpha",
-      type: "private",
-      memberCount: 5,
-      isActive: true,
-    },
-    {
-      id: "wsb-traders",
-      name: "WSB Traders",
-      type: "public",
-      memberCount: 1234,
-      isActive: true,
-    },
-  ]);
+  // TODO: Fetch workspaces from API
+  // const { data: workspaces } = useQuery(['workspaces'], () => fetch('/api/workspaces').then(r => r.json()));
+  const [workspaces] = useState<WorkspaceContext[]>([]);
 
   // Map pathname to PageId
   const getCurrentPage = (): PageId => {

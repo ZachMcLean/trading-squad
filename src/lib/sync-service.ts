@@ -147,6 +147,11 @@ export class SnapTradeSyncService {
           snaptradeUserId: this.snaptradeUserDbId,
         },
       },
+      include: {
+        connection: {
+          select: { broker: true },
+        },
+      },
     });
 
     console.log(`[Sync] Syncing positions for ${accounts.length} account(s)`);
@@ -170,7 +175,7 @@ export class SnapTradeSyncService {
 
         const positions = positionsRes.data || [];
         console.log(`[Sync] Received ${positions.length} position(s) from SnapTrade for account ${account.snaptradeAccountId}`);
-        console.log(`[Sync] SnapTrade response status: ${positionsRes.response?.status || 'unknown'}`);
+        console.log(`[Sync] SnapTrade response status: ${positionsRes.status || 'unknown'}`);
         console.log(`[Sync] Response data type: ${Array.isArray(positionsRes.data) ? 'array' : typeof positionsRes.data}`);
 
         // Log raw position data for debugging
@@ -448,4 +453,124 @@ export async function createSyncService(userId: string) {
     snaptradeUser.userSecret,
     snaptradeUser.id // Pass the database ID for foreign key
   );
+}
+
+// ===== BATCH SYNC UTILITIES =====
+
+export interface BatchSyncResult {
+  userId: string;
+  email: string;
+  success: boolean;
+  error?: string;
+  durationMs: number;
+}
+
+export interface BatchSyncSummary {
+  totalUsers: number;
+  successCount: number;
+  failCount: number;
+  totalDurationMs: number;
+  results: BatchSyncResult[];
+}
+
+/**
+ * Rate limit helper - waits between operations
+ */
+export function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Batch sync all users with active SnapTrade connections
+ * @param delayBetweenUsersMs - Delay between user syncs to avoid API throttling (default: 500ms)
+ * @param onProgress - Optional callback for progress updates
+ */
+export async function batchSyncAllUsers(
+  delayBetweenUsersMs: number = 500,
+  onProgress?: (current: number, total: number, result: BatchSyncResult) => void
+): Promise<BatchSyncSummary> {
+  const startTime = Date.now();
+
+  // Fetch all users with active connections
+  const snaptradeUsers = await prisma.snaptradeUser.findMany({
+    include: {
+      user: {
+        select: {
+          id: true,
+          email: true,
+          name: true,
+        },
+      },
+      brokerageConnections: {
+        where: {
+          status: "active",
+        },
+        select: {
+          id: true,
+        },
+      },
+    },
+  });
+
+  // Filter to users with active connections
+  const usersWithConnections = snaptradeUsers.filter(
+    (su) => su.brokerageConnections.length > 0
+  );
+
+  const results: BatchSyncResult[] = [];
+
+  for (let i = 0; i < usersWithConnections.length; i++) {
+    const snaptradeUser = usersWithConnections[i];
+    const userStartTime = Date.now();
+
+    try {
+      const syncService = new SnapTradeSyncService(
+        snaptradeUser.userId,
+        snaptradeUser.snaptradeUserId,
+        snaptradeUser.userSecret,
+        snaptradeUser.id
+      );
+
+      await syncService.quickSync();
+
+      const result: BatchSyncResult = {
+        userId: snaptradeUser.userId,
+        email: snaptradeUser.user.email,
+        success: true,
+        durationMs: Date.now() - userStartTime,
+      };
+
+      results.push(result);
+      onProgress?.(i + 1, usersWithConnections.length, result);
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      const result: BatchSyncResult = {
+        userId: snaptradeUser.userId,
+        email: snaptradeUser.user.email,
+        success: false,
+        error: errorMessage,
+        durationMs: Date.now() - userStartTime,
+      };
+
+      results.push(result);
+      onProgress?.(i + 1, usersWithConnections.length, result);
+    }
+
+    // Rate limiting between users
+    if (i < usersWithConnections.length - 1) {
+      await sleep(delayBetweenUsersMs);
+    }
+  }
+
+  const successCount = results.filter((r) => r.success).length;
+  const failCount = results.filter((r) => !r.success).length;
+
+  return {
+    totalUsers: usersWithConnections.length,
+    successCount,
+    failCount,
+    totalDurationMs: Date.now() - startTime,
+    results,
+  };
 }

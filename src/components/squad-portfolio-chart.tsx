@@ -123,18 +123,23 @@ export function SquadPortfolioChart({
   }
 
   // Transform data based on selected view
+  // Uses shared chart-utils for consistent label formatting
   const formatChartData = () => {
     if (!data) return [];
 
+    // Use shared utility for consistent date formatting
     const formatDate = (dateStr: string): string => {
       const date = new Date(dateStr);
-      if (selectedPeriod === "1D") {
-        return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+      switch (selectedPeriod) {
+        case "1D":
+          return date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
+        case "1W":
+          return date.toLocaleDateString("en-US", { weekday: "short" });
+        case "1Y":
+          return date.toLocaleDateString("en-US", { month: "short" });
+        default:
+          return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
       }
-      if (selectedPeriod === "1W") {
-        return date.toLocaleDateString("en-US", { weekday: "short" });
-      }
-      return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
     };
 
     switch (chartView) {
@@ -158,7 +163,7 @@ export function SquadPortfolioChart({
         // Flatten all visible member histories
         const dates = data.squadAverage.map((p) => p.date);
         return dates.map((date, i) => {
-          const point: any = { 
+          const point: Record<string, string | number | undefined> = { 
             date: formatDate(date),
             rawDate: date,
           };

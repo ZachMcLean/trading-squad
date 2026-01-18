@@ -335,7 +335,7 @@ export function AccountPortfolios({ selectedPeriod }: AccountPortfoliosProps) {
               </Badge>
               {accountsWithErrors.length > 0 && (
                 <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-xs">
-                  {accountsWithErrors.length} Need Sync
+                  {accountsWithErrors.length} Need Attention
                 </Badge>
               )}
             </div>
@@ -363,15 +363,6 @@ export function AccountPortfolios({ selectedPeriod }: AccountPortfoliosProps) {
             >
               <Plus className="w-4 h-4 mr-1.5" />
               <span className="hidden sm:inline">Connect Account</span>
-            </Button>
-            <Button
-              size="sm"
-              variant="ghost"
-              className="text-cyan-400 hover:bg-cyan-500/10"
-              onClick={handleSync}
-              disabled={syncMutation.isPending}
-            >
-              <RefreshCw className={`w-4 h-4 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
             </Button>
           </div>
         </div>
@@ -571,7 +562,7 @@ export function AccountPortfolios({ selectedPeriod }: AccountPortfoliosProps) {
                         <p className="text-white">{account.details.accountType}</p>
                       </div>
                       <div className="space-y-1">
-                        <p className="text-xs text-slate-400">Last Sync</p>
+                        <p className="text-xs text-slate-400">Last Updated</p>
                         <p className="text-white">{account.details.lastSync}</p>
                       </div>
                     </div>
@@ -591,16 +582,9 @@ export function AccountPortfolios({ selectedPeriod }: AccountPortfoliosProps) {
                               <li>Sync encountered an error fetching positions</li>
                               <li>SnapTrade API returned positions in an unexpected format</li>
                             </ul>
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              className="mt-2 border-yellow-500/30 text-yellow-400 hover:bg-yellow-500/10"
-                              onClick={handleSync}
-                              disabled={syncMutation.isPending}
-                            >
-                              <RefreshCw className={`w-3 h-3 mr-1.5 ${syncMutation.isPending ? 'animate-spin' : ''}`} />
-                              Sync Positions Now
-                            </Button>
+                            <p className="text-xs text-slate-500 mt-2">
+                              Automatic sync runs daily. If this persists, try manually syncing from the main chart.
+                            </p>
                           </div>
                         </div>
                       </div>
@@ -832,10 +816,6 @@ export function AccountPortfolios({ selectedPeriod }: AccountPortfoliosProps) {
                       <Button size="sm" variant="outline" className="flex-1 border-slate-600 hover:bg-slate-700">
                         <BarChart3 className="w-3 h-3 mr-1.5" />
                         View Details
-                      </Button>
-                      <Button size="sm" variant="outline" className="flex-1 border-slate-600 hover:bg-slate-700">
-                        <RefreshCw className="w-3 h-3 mr-1.5" />
-                        Sync Now
                       </Button>
                     </div>
                   </div>

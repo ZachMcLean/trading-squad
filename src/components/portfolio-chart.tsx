@@ -91,81 +91,30 @@ export function PortfolioChart({ selectedPeriod, onPeriodChange, mode }: Portfol
   };
   
   // Transform API data to chart format
+  // The API now returns pre-sampled data with consistent intervals and labels
   const formatChartData = () => {
     if (!historyData?.history || historyData.history.length === 0) {
       return [];
     }
 
     const history = historyData.history;
-    const chartData = [];
-    
-    // Get the account connection date or use a reasonable starting point
-    const firstSnapshotDate = new Date(history[0]?.date);
-    const currentDate = new Date();
-    
-    // Calculate the start date based on selected period
-    let periodStartDate = new Date();
-    switch (selectedPeriod) {
-      case "1D": periodStartDate.setDate(currentDate.getDate() - 1); break;
-      case "1W": periodStartDate.setDate(currentDate.getDate() - 7); break;
-      case "1M": periodStartDate.setMonth(currentDate.getMonth() - 1); break;
-      case "3M": periodStartDate.setMonth(currentDate.getMonth() - 3); break;
-      case "6M": periodStartDate.setMonth(currentDate.getMonth() - 6); break;
-      case "1Y": periodStartDate.setFullYear(currentDate.getFullYear() - 1); break;
-      case "YTD": periodStartDate = new Date(currentDate.getFullYear(), 0, 1); break;
-    }
-    
-    // If we only have one snapshot, add a baseline starting point
-    if (history.length === 1) {
-      const startDate = firstSnapshotDate > periodStartDate ? periodStartDate : new Date(firstSnapshotDate.getTime() - 24 * 60 * 60 * 1000);
-      const startLabel = selectedPeriod === "1D" 
-        ? startDate.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })
-        : startDate.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-      
-      // Add baseline starting point at $0
-      chartData.push({
-        date: startLabel,
-        combined: 0,
-        combinedPercent: 0,
-        rawDate: startDate.toISOString(),
-      });
-    }
-    
-    // Add all actual snapshots
     const baseValue = history[0]?.value || 0;
     
-    history.forEach((point, index) => {
-      const date = new Date(point.date);
-      let label = "";
+    return history.map((point) => {
+      // Calculate percent change from the first data point
+      const percentChange = baseValue > 0 
+        ? ((point.value - baseValue) / baseValue) * 100 
+        : 0;
       
-      // Format label based on period
-      if (selectedPeriod === "1D") {
-        label = date.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" });
-      } else if (selectedPeriod === "1W") {
-        label = date.toLocaleDateString("en-US", { weekday: "short" });
-      } else if (selectedPeriod === "1M" || selectedPeriod === "3M" || selectedPeriod === "6M" || selectedPeriod === "YTD") {
-        // Show fewer labels for longer periods
-        const totalPoints = history.length;
-        const showLabel = index % Math.max(1, Math.floor(totalPoints / 6)) === 0 || index === totalPoints - 1;
-        label = showLabel ? date.toLocaleDateString("en-US", { month: "short", day: "numeric" }) : "";
-      } else {
-        // 1Y
-        const totalPoints = history.length;
-        const showLabel = index % Math.max(1, Math.floor(totalPoints / 12)) === 0 || index === totalPoints - 1;
-        label = showLabel ? date.toLocaleDateString("en-US", { month: "short" }) : "";
-      }
-      
-      const percentChange = baseValue > 0 ? ((point.value - baseValue) / baseValue) * 100 : 0;
-      
-      chartData.push({
-        date: label,
+      return {
+        // Use pre-formatted label from API, or fall back to date
+        date: point.label || point.date,
         combined: Math.round(point.value),
         combinedPercent: parseFloat(percentChange.toFixed(2)),
         rawDate: point.date,
-      });
+        isInterpolated: point.isInterpolated || false,
+      };
     });
-    
-    return chartData;
   };
 
   const data = formatChartData();
@@ -220,9 +169,17 @@ export function PortfolioChart({ selectedPeriod, onPeriodChange, mode }: Portfol
     if (active && payload && payload.length) {
       const value = payload[0].value;
       const percentChange = payload[0].payload.combinedPercent;
+      const isInterpolated = payload[0].payload.isInterpolated;
+      const rawDate = payload[0].payload.rawDate;
+      
       return (
         <div className="bg-slate-900 border border-slate-700 rounded-lg p-3 shadow-xl">
-          <p className="text-slate-400 text-xs mb-2">{label}</p>
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <p className="text-slate-400 text-xs">{label}</p>
+            {isInterpolated && (
+              <span className="text-xs text-slate-500 italic">estimated</span>
+            )}
+          </div>
           <div className="space-y-1">
             <div className="flex items-center justify-between gap-4">
               <span className="text-slate-300 text-sm">Value</span>
@@ -242,6 +199,9 @@ export function PortfolioChart({ selectedPeriod, onPeriodChange, mode }: Portfol
     }
     return null;
   };
+  
+  // Get data quality info for display
+  const dataQuality = historyData?.dataQuality;
 
   // Show loading state
   if (historyLoading || summaryLoading) {

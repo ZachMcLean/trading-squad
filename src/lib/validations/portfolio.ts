@@ -64,11 +64,20 @@ export const PortfolioHistoryPointSchema = z.object({
   value: z.number(),
   pl: z.number(),
   plPercent: z.number(),
+  isInterpolated: z.boolean().optional().default(false),
+  label: z.string().optional(), // Pre-formatted label for charts
+});
+
+export const DataQualitySchema = z.object({
+  actualPoints: z.number(),
+  totalPoints: z.number(),
+  coverage: z.number(), // Percentage (0-100)
 });
 
 export const PortfolioHistoryResponseSchema = z.object({
   history: z.array(PortfolioHistoryPointSchema),
   period: TimePeriodSchema,
+  dataQuality: DataQualitySchema.optional(),
 });
 
 export const AccountsResponseSchema = z.object({
@@ -124,6 +133,7 @@ export type Position = z.infer<typeof PositionSchema>;
 export type BrokerageAccount = z.infer<typeof BrokerageAccountSchema>;
 export type PortfolioSummary = z.infer<typeof PortfolioSummarySchema>;
 export type PortfolioHistoryPoint = z.infer<typeof PortfolioHistoryPointSchema>;
+export type DataQuality = z.infer<typeof DataQualitySchema>;
 export type PortfolioHistoryResponse = z.infer<typeof PortfolioHistoryResponseSchema>;
 export type AccountsResponse = z.infer<typeof AccountsResponseSchema>;
 export type SyncResponse = z.infer<typeof SyncResponseSchema>;

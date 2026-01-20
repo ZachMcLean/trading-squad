@@ -107,6 +107,37 @@ export class SnapTradeSyncService {
 
       const balance = acc.balance?.total;
       const cash = (acc.balance as any)?.cash || acc.balance?.total;
+      
+      // Extract buying power and margin info from SnapTrade balance object
+      // SnapTrade may use different field names, so we try multiple variations
+      const buyingPower = 
+        (acc.balance as any)?.buying_power?.amount || 
+        (acc.balance as any)?.buyingPower?.amount ||
+        (acc.balance as any)?.buying_power ||
+        null;
+      
+      const marginAvailable = 
+        (acc.balance as any)?.margin?.available?.amount || 
+        (acc.balance as any)?.marginAvailable?.amount ||
+        (acc.balance as any)?.margin_available?.amount ||
+        null;
+      
+      const marginUsed = 
+        (acc.balance as any)?.margin?.used?.amount || 
+        (acc.balance as any)?.marginUsed?.amount ||
+        (acc.balance as any)?.margin_used?.amount ||
+        null;
+      
+      const marginMaintenance = 
+        (acc.balance as any)?.margin?.maintenance?.amount || 
+        (acc.balance as any)?.marginMaintenance?.amount ||
+        (acc.balance as any)?.margin_maintenance?.amount ||
+        null;
+      
+      // Log balance structure for debugging (only for accounts with margin data)
+      if (marginAvailable || marginUsed || buyingPower) {
+        console.log(`[Sync] Account ${acc.id} balance structure:`, JSON.stringify(acc.balance, null, 2));
+      }
 
       await prisma.brokerageAccount.upsert({
         where: { snaptradeAccountId: acc.id },
@@ -118,6 +149,10 @@ export class SnapTradeSyncService {
           accountType: acc.meta?.type || "Unknown",
           totalValue: balance?.amount || 0,
           totalCash: cash?.amount || 0,
+          buyingPower,
+          marginAvailable,
+          marginUsed,
+          marginMaintenance,
           currency: balance?.currency || "USD",
           status: "active",
           lastSyncedAt: new Date(),
@@ -129,6 +164,10 @@ export class SnapTradeSyncService {
           accountType: acc.meta?.type || "Unknown",
           totalValue: balance?.amount || 0,
           totalCash: cash?.amount || 0,
+          buyingPower,
+          marginAvailable,
+          marginUsed,
+          marginMaintenance,
           currency: balance?.currency || "USD",
           lastSyncedAt: new Date(),
           metadata: acc as any,

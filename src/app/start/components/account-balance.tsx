@@ -125,15 +125,42 @@ export function AccountBalance({
         ) : null}
 
         {!error && !loading && Array.isArray(data?.accounts) && data!.accounts.length > 0 ? (
-          <div className="space-y-1">
+          <div className="space-y-3">
             {data!.accounts.map((a: any) => {
               const amt = a?.balance?.total?.amount;
               const cur = a?.balance?.total?.currency ?? data?.currency;
               const display = formatCurrency(amt, cur);
+              const hasMarginData = a?.marginAvailable != null || a?.marginUsed != null || a?.marginMaintenance != null;
+              
               return (
-                <div key={a.id} className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">{a?.name ?? a?.account_number ?? a.id}</span>
-                  <span className="font-medium">{display ?? "-"}</span>
+                <div key={a.id} className="space-y-1">
+                  <div className="flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">{a?.name ?? a?.account_number ?? a.id}</span>
+                    <span className="font-medium">{display ?? "-"}</span>
+                  </div>
+                  
+                  {hasMarginData && (
+                    <div className="pl-4 space-y-0.5 text-xs border-l-2 border-slate-700/50">
+                      {a?.marginAvailable != null && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500">Margin Available</span>
+                          <span className="text-cyan-400 tabular-nums">{formatCurrency(a.marginAvailable, cur) ?? "-"}</span>
+                        </div>
+                      )}
+                      {a?.marginUsed != null && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500">Margin Used</span>
+                          <span className="text-slate-400 tabular-nums">{formatCurrency(a.marginUsed, cur) ?? "-"}</span>
+                        </div>
+                      )}
+                      {a?.marginMaintenance != null && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-500">Maintenance Req.</span>
+                          <span className="text-slate-400 tabular-nums">{formatCurrency(a.marginMaintenance, cur) ?? "-"}</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}

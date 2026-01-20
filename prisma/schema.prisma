@@ -193,6 +193,11 @@ model BrokerageAccount {
   totalCash             Float    @default(0)
   buyingPower           Float?
   currency              String?  // "USD", "CAD", "EUR", etc
+  
+  // Margin Info
+  marginAvailable       Float?
+  marginUsed            Float?
+  marginMaintenance     Float?
 
   // Status
   status                String   @default("active") // "active", "inactive", "error"

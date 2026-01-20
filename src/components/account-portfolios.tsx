@@ -29,6 +29,7 @@ interface AccountPortfoliosProps {
 interface Position {
   symbol: string;
   shares: number;
+  currentPrice: number;
   value: number;
   change: number;
   changePercent: number;
@@ -123,6 +124,14 @@ export function AccountPortfolios({ selectedPeriod }: AccountPortfoliosProps) {
     );
   }
 
+  // Helper function to mask account number for privacy
+  const maskAccountNumber = (accountNumber: string): string => {
+    if (!accountNumber || accountNumber === "****") return "****";
+    // Show only last 4 digits: "****1234"
+    const last4 = accountNumber.slice(-4);
+    return `****${last4}`;
+  };
+
   // Map API accounts to component format (keeping existing UI structure)
   const accounts: (BrokerageAccount & { id?: string })[] = apiAccounts.map((acc: typeof apiAccounts[0], index: number) => {
     // Calculate diversification score based on position distribution
@@ -146,7 +155,7 @@ export function AccountPortfolios({ selectedPeriod }: AccountPortfoliosProps) {
       rank: index + 1,
       broker: acc.broker,
       accountName: acc.accountName || acc.accountType || "Account",
-      accountNumber: acc.accountNumber || "****",
+      accountNumber: maskAccountNumber(acc.accountNumber || ""),
       portfolioValue: acc.totalValue,
       change: acc.dailyPL || 0, // ✨ Use daily P&L instead of total
       changePercent: acc.dailyPLPercent || 0, // ✨ Use daily P&L % instead of total
@@ -161,9 +170,9 @@ export function AccountPortfolios({ selectedPeriod }: AccountPortfoliosProps) {
         ytdPLPercent: acc.totalPLPercent, // Keep total P&L % for detailed view
         dayTrades: "0/3", // TODO: Add this to API
         accountType: acc.accountType || "Cash",
-        marginAvailable: 0, // TODO: Add this to API
-        marginMaintenance: 0, // TODO: Add this to API
-        marginUsed: 0, // TODO: Add this to API
+        marginAvailable: acc.marginAvailable || 0,
+        marginMaintenance: acc.marginMaintenance || 0,
+        marginUsed: acc.marginUsed || 0,
         accountHealth: accountHealth,
         lastSync: acc.lastSyncedAt ? `${Math.floor((Date.now() - new Date(acc.lastSyncedAt).getTime()) / 60000)}m ago` : "Never",
         topHolding: acc.positions[0]?.symbol || "N/A",
@@ -172,6 +181,7 @@ export function AccountPortfolios({ selectedPeriod }: AccountPortfoliosProps) {
         positions: acc.positions.map((pos: typeof acc.positions[0]) => ({
           symbol: pos.symbol,
           shares: pos.quantity,
+          currentPrice: pos.currentPrice,
           value: pos.marketValue,
           change: pos.unrealizedPL || 0,
           changePercent: pos.unrealizedPLPercent || 0,
@@ -453,27 +463,20 @@ export function AccountPortfolios({ selectedPeriod }: AccountPortfoliosProps) {
                     </div>
 
                     {/* Center: Value & Performance */}
-                    <div className="hidden sm:flex flex-col items-end gap-1">
+                    <div className="hidden sm:flex flex-col items-end justify-center">
                       <span className="text-white font-mono tabular-nums text-lg">
                         ${account.portfolioValue.toLocaleString()}
                       </span>
                       <div className={`flex items-center gap-1.5 ${account.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                        {account.changePercent >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                        <span className="font-semibold font-mono tabular-nums">
+                        {account.changePercent >= 0 ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+                        <span className="font-semibold font-mono tabular-nums text-sm">
                           {account.changePercent >= 0 ? '+' : ''}{account.changePercent.toFixed(2)}%
                         </span>
                       </div>
-                      <span className="text-xs text-slate-500">
-                        {account.change >= 0 ? '+' : ''}${Math.abs(account.change).toLocaleString('en-US', { maximumFractionDigits: 2 })}
-                      </span>
                     </div>
 
                     {/* Right: Quick Stats */}
                     <div className="hidden md:flex items-center gap-3">
-                      <div className="flex items-center gap-1.5 px-2 py-1 bg-purple-500/10 border border-purple-500/20 rounded text-xs text-purple-400">
-                        <Target className="w-3 h-3" />
-                        <span>{account.details.topHolding}</span>
-                      </div>
                       <div className={`flex items-center gap-2 px-2 py-1 rounded-lg border text-xs ${healthColors.bg} ${healthColors.border} ${healthColors.text}`}>
                         <Activity className="w-3 h-3" />
                         <span>{account.details.accountHealth}</span>
@@ -490,14 +493,9 @@ export function AccountPortfolios({ selectedPeriod }: AccountPortfoliosProps) {
 
                   {/* Mobile: Value & Performance */}
                   <div className="flex sm:hidden items-center justify-between mt-3 pt-3 border-t border-slate-700/50">
-                    <div>
-                      <span className="text-white font-mono text-base">
-                        ${account.portfolioValue.toLocaleString()}
-                      </span>
-                      <p className="text-xs text-slate-500 mt-0.5">
-                        {account.change >= 0 ? '+' : ''}${Math.abs(account.change).toLocaleString('en-US', { maximumFractionDigits: 2 })}
-                      </p>
-                    </div>
+                    <span className="text-white font-mono text-base">
+                      ${account.portfolioValue.toLocaleString()}
+                    </span>
                     <div className={`flex items-center gap-1.5 ${account.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                       {account.changePercent >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
                       <span className="font-semibold font-mono text-base">
@@ -566,6 +564,42 @@ export function AccountPortfolios({ selectedPeriod }: AccountPortfoliosProps) {
                         <p className="text-white">{account.details.lastSync}</p>
                       </div>
                     </div>
+
+                    {/* Margin Information */}
+                    {(account.details.marginAvailable > 0 || account.details.marginUsed > 0 || account.details.marginMaintenance > 0) && (
+                      <div className="p-4 rounded-lg bg-purple-500/5 border border-purple-500/20">
+                        <div className="flex items-center gap-2 mb-3">
+                          <Zap className="w-4 h-4 text-purple-400" />
+                          <h4 className="text-sm font-semibold text-slate-300">Margin Account Details</h4>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                          {account.details.marginAvailable > 0 && (
+                            <div className="space-y-1">
+                              <p className="text-xs text-slate-500">Available</p>
+                              <p className="text-cyan-400 font-mono font-semibold tabular-nums">
+                                ${account.details.marginAvailable.toLocaleString()}
+                              </p>
+                            </div>
+                          )}
+                          {account.details.marginUsed > 0 && (
+                            <div className="space-y-1">
+                              <p className="text-xs text-slate-500">Used</p>
+                              <p className="text-slate-300 font-mono tabular-nums">
+                                ${account.details.marginUsed.toLocaleString()}
+                              </p>
+                            </div>
+                          )}
+                          {account.details.marginMaintenance > 0 && (
+                            <div className="space-y-1">
+                              <p className="text-xs text-slate-500">Maintenance Req.</p>
+                              <p className="text-slate-300 font-mono tabular-nums">
+                                ${account.details.marginMaintenance.toLocaleString()}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
 
                     {/* Sync Error Warning */}
                     {account.details.positions.length === 0 && account.details.lastSync !== "Never" && (
@@ -724,6 +758,7 @@ export function AccountPortfolios({ selectedPeriod }: AccountPortfoliosProps) {
                               <tr>
                                 <th className="text-left p-3 text-xs font-semibold text-slate-400 uppercase">Position</th>
                                 <th className="text-right p-3 text-xs font-semibold text-slate-400 uppercase">Qty</th>
+                                <th className="text-right p-3 text-xs font-semibold text-slate-400 uppercase hidden lg:table-cell">Price</th>
                                 <th className="text-right p-3 text-xs font-semibold text-slate-400 uppercase hidden sm:table-cell">Value</th>
                                 <th className="text-right p-3 text-xs font-semibold text-slate-400 uppercase hidden md:table-cell">P&L</th>
                                 <th className="text-right p-3 text-xs font-semibold text-slate-400 uppercase">Return</th>
@@ -748,6 +783,11 @@ export function AccountPortfolios({ selectedPeriod }: AccountPortfoliosProps) {
                                   </td>
                                   <td className="p-3 text-right">
                                     <span className="font-mono text-slate-300 text-sm">{position.shares.toLocaleString()}</span>
+                                  </td>
+                                  <td className="p-3 text-right hidden lg:table-cell">
+                                    <span className="font-mono text-cyan-400 text-sm tabular-nums">
+                                      ${position.currentPrice.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                    </span>
                                   </td>
                                   <td className="p-3 text-right hidden sm:table-cell">
                                     <span className="font-mono text-white font-semibold text-sm">${position.value.toLocaleString()}</span>

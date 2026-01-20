@@ -33,7 +33,37 @@ export async function GET(req: NextRequest) {
       },
     },
     orderBy: { totalValue: "desc" },
-  });
+  }) as Array<{
+    id: string;
+    totalValue: number;
+    totalCash: number;
+    buyingPower: number | null;
+    marginAvailable: number | null;
+    marginUsed: number | null;
+    marginMaintenance: number | null;
+    accountName: string | null;
+    accountNumber: string | null;
+    accountType: string | null;
+    status: string;
+    lastSyncedAt: Date | null;
+    connection: {
+      broker: string;
+      brokerName: string | null;
+    };
+    positions: Array<{
+      symbol: string;
+      securityName: string | null;
+      quantity: number;
+      averageCost: number;
+      currentPrice: number;
+      marketValue: number;
+      unrealizedPL: number | null;
+      unrealizedPLPercent: number | null;
+    }>;
+    _count: {
+      positions: number;
+    };
+  }>;
 
   // Calculate daily performance for each account
   const today = new Date();
@@ -97,6 +127,9 @@ export async function GET(req: NextRequest) {
       totalValue: acc.totalValue,
       totalCash: acc.totalCash,
       buyingPower: acc.buyingPower,
+      marginAvailable: acc.marginAvailable,
+      marginUsed: acc.marginUsed,
+      marginMaintenance: acc.marginMaintenance,
       totalPL,
       totalPLPercent,
       dailyPL, // ✨ NEW: Today's gain/loss in dollars

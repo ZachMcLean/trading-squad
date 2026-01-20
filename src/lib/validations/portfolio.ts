@@ -38,6 +38,9 @@ export const BrokerageAccountSchema = z.object({
   totalValue: z.number(),
   totalCash: z.number(),
   buyingPower: z.number().nullable(),
+  marginAvailable: z.number().nullable().optional(),
+  marginUsed: z.number().nullable().optional(),
+  marginMaintenance: z.number().nullable().optional(),
   totalPL: z.number(),
   totalPLPercent: z.number(),
   dailyPL: z.number().optional().default(0), // Daily gain/loss in dollars

@@ -160,8 +160,18 @@ export function PortfolioChart({ selectedPeriod, onPeriodChange, mode }: Portfol
   const formatSyncTime = (minutes: number) => {
     if (minutes === 0) return "Just now";
     if (minutes < 60) return `${minutes}m ago`;
+    
     const hours = Math.floor(minutes / 60);
-    return `${hours}h ago`;
+    if (hours < 24) return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+    
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days} ${days === 1 ? 'day' : 'days'} ago`;
+    
+    const weeks = Math.floor(days / 7);
+    if (weeks < 4) return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
+    
+    const months = Math.floor(days / 30);
+    return `${months} ${months === 1 ? 'month' : 'months'} ago`;
   };
 
   // Custom tooltip component
@@ -438,30 +448,6 @@ export function PortfolioChart({ selectedPeriod, onPeriodChange, mode }: Portfol
               style={{ width: `${goalProgress}%` }}
             />
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent animate-pulse" />
-          </div>
-        </div>
-
-        {/* Chart Info - Period Performance Summary */}
-        <div className="flex items-center justify-between gap-3 flex-wrap">
-          <div className="flex items-center gap-4 text-sm">
-            <div className="flex items-center gap-2">
-              <span className="text-slate-400">Period Return:</span>
-              <span className={`font-semibold tabular-nums ${portfolioReturn >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {portfolioReturn >= 0 ? '+' : ''}{portfolioReturn.toFixed(2)}%
-              </span>
-            </div>
-            <div className="hidden sm:flex items-center gap-2">
-              <span className="text-slate-400">S&P 500:</span>
-              <span className={`tabular-nums ${sp500Return >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {sp500Return >= 0 ? '+' : ''}{sp500Return.toFixed(2)}%
-              </span>
-            </div>
-            <div className="hidden md:flex items-center gap-2">
-              <span className="text-slate-400">Outperformance:</span>
-              <span className={`font-medium tabular-nums ${vsSP500 >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-                {vsSP500 >= 0 ? '+' : ''}{vsSP500.toFixed(1)}%
-              </span>
-            </div>
           </div>
         </div>
 

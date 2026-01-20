@@ -132,8 +132,27 @@ export function AccountPortfolios({ selectedPeriod }: AccountPortfoliosProps) {
     return `****${last4}`;
   };
 
+  const formatTimeAgo = (date: Date): string => {
+    const minutes = Math.floor((Date.now() - date.getTime()) / 60000);
+    
+    if (minutes === 0) return "Just now";
+    if (minutes < 60) return `${minutes}m ago`;
+    
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours} ${hours === 1 ? 'hour' : 'hours'} ago`;
+    
+    const days = Math.floor(hours / 24);
+    if (days < 7) return `${days} ${days === 1 ? 'day' : 'days'} ago`;
+    
+    const weeks = Math.floor(days / 7);
+    if (weeks < 4) return `${weeks} ${weeks === 1 ? 'week' : 'weeks'} ago`;
+    
+    const months = Math.floor(days / 30);
+    return `${months} ${months === 1 ? 'month' : 'months'} ago`;
+  };
+
   // Map API accounts to component format (keeping existing UI structure)
-  const accounts: (BrokerageAccount & { id?: string })[] = apiAccounts.map((acc: typeof apiAccounts[0], index: number) => {
+  const accounts: (BrokerageAccount & { id?: string; costBasis?: number; winRate?: number; largestPosition?: string; largestPositionPercent?: number; avgPositionSize?: number })[] = apiAccounts.map((acc: typeof apiAccounts[0], index: number) => {
     // Calculate diversification score based on position distribution
     const positionValues = acc.positions.map((p: typeof acc.positions[0]) => p.marketValue);
     const totalPositionValue = positionValues.reduce((sum: number, val: number) => sum + val, 0);
@@ -150,6 +169,30 @@ export function AccountPortfolios({ selectedPeriod }: AccountPortfoliosProps) {
     if (maxConcentration > 0.5) riskLevel = "Aggressive";
     else if (maxConcentration < 0.25 && diversificationScore > 70) riskLevel = "Conservative";
     
+    // ✨ NEW METRICS
+    // Calculate cost basis (total invested amount)
+    const costBasis = acc.positions.reduce((sum: number, p: typeof acc.positions[0]) => 
+      sum + ((p.averageCost || 0) * p.quantity), 0
+    );
+    
+    // Calculate win rate (% of positions with gains)
+    const winningPositions = acc.positions.filter((p: typeof acc.positions[0]) => (p.unrealizedPL || 0) > 0).length;
+    const winRate = acc.positions.length > 0 ? (winningPositions / acc.positions.length) * 100 : 0;
+    
+    // Find largest position
+    const largestPos = acc.positions.length > 0 
+      ? acc.positions.reduce((max: typeof acc.positions[0], p: typeof acc.positions[0]) => 
+          p.marketValue > max.marketValue ? p : max
+        )
+      : null;
+    const largestPosition = largestPos?.symbol || "N/A";
+    const largestPositionPercent = largestPos && totalPositionValue > 0 
+      ? (largestPos.marketValue / totalPositionValue) * 100 
+      : 0;
+    
+    // Calculate average position size
+    const avgPositionSize = acc.positions.length > 0 ? totalPositionValue / acc.positions.length : 0;
+    
     return {
       id: acc.id, // Store API ID for expansion tracking
       rank: index + 1,
@@ -163,6 +206,12 @@ export function AccountPortfolios({ selectedPeriod }: AccountPortfoliosProps) {
       icon: acc.broker === "ROBINHOOD" ? "🎯" : acc.broker === "FIDELITY" ? "🏦" : "⚡",
       isConnected: acc.status === "active",
       isPrimary: index === 0,
+      // ✨ NEW METRICS
+      costBasis,
+      winRate,
+      largestPosition,
+      largestPositionPercent,
+      avgPositionSize,
       details: {
         buyingPower: acc.buyingPower || 0,
         cash: acc.totalCash,
@@ -174,7 +223,7 @@ export function AccountPortfolios({ selectedPeriod }: AccountPortfoliosProps) {
         marginMaintenance: acc.marginMaintenance || 0,
         marginUsed: acc.marginUsed || 0,
         accountHealth: accountHealth,
-        lastSync: acc.lastSyncedAt ? `${Math.floor((Date.now() - new Date(acc.lastSyncedAt).getTime()) / 60000)}m ago` : "Never",
+        lastSync: acc.lastSyncedAt ? formatTimeAgo(new Date(acc.lastSyncedAt)) : "Never",
         topHolding: acc.positions[0]?.symbol || "N/A",
         diversificationScore: diversificationScore,
         riskLevel: riskLevel,
@@ -512,21 +561,6 @@ export function AccountPortfolios({ selectedPeriod }: AccountPortfoliosProps) {
                     <div className="p-4 rounded-lg bg-gradient-to-r from-cyan-500/10 to-blue-500/10 border border-cyan-500/20">
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
                         <div>
-                          <p className="text-xs text-slate-400 mb-1">Total Value</p>
-                          <p className="text-lg font-mono text-white">${account.portfolioValue.toLocaleString()}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-slate-400 mb-1">Today's Change</p>
-                          <div className={account.changePercent >= 0 ? 'text-emerald-400' : 'text-red-400'}>
-                            <p className="text-lg font-mono font-semibold">
-                              {account.changePercent >= 0 ? '+' : ''}{account.changePercent.toFixed(2)}%
-                            </p>
-                            <p className="text-xs opacity-75">
-                              {account.change >= 0 ? '+' : ''}${Math.abs(account.change).toLocaleString('en-US', { maximumFractionDigits: 2 })}
-                            </p>
-                          </div>
-                        </div>
-                        <div>
                           <p className="text-xs text-slate-400 mb-1">Total P&L</p>
                           <div className={account.details.ytdPL >= 0 ? 'text-emerald-400' : 'text-red-400'}>
                             <p className="text-lg font-mono font-semibold">
@@ -538,9 +572,21 @@ export function AccountPortfolios({ selectedPeriod }: AccountPortfoliosProps) {
                           </div>
                         </div>
                         <div>
-                          <p className="text-xs text-slate-400 mb-1">Positions</p>
-                          <p className="text-lg font-mono text-white">{account.details.positions.length}</p>
-                          <p className="text-xs text-cyan-400">{account.details.topHolding} leading</p>
+                          <p className="text-xs text-slate-400 mb-1">Cost Basis</p>
+                          <p className="text-lg font-mono text-white">${(account.costBasis || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
+                          <p className="text-xs text-slate-400">Total invested</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-400 mb-1">Win Rate</p>
+                          <p className={`text-lg font-mono font-semibold ${(account.winRate || 0) >= 60 ? 'text-emerald-400' : (account.winRate || 0) >= 40 ? 'text-yellow-400' : 'text-red-400'}`}>
+                            {(account.winRate || 0).toFixed(0)}%
+                          </p>
+                          <p className="text-xs text-slate-400">Positions profitable</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-slate-400 mb-1">Largest Position</p>
+                          <p className="text-lg font-mono text-white">{account.largestPosition}</p>
+                          <p className="text-xs text-cyan-400">{(account.largestPositionPercent || 0).toFixed(1)}% of portfolio</p>
                         </div>
                       </div>
                     </div>
@@ -552,12 +598,12 @@ export function AccountPortfolios({ selectedPeriod }: AccountPortfoliosProps) {
                         <p className="text-white font-mono">${account.details.buyingPower.toLocaleString()}</p>
                       </div>
                       <div className="space-y-1">
-                        <p className="text-xs text-slate-400">Cash</p>
+                        <p className="text-xs text-slate-400">Cash Balance</p>
                         <p className="text-white font-mono">${account.details.cash.toLocaleString()}</p>
                       </div>
                       <div className="space-y-1">
-                        <p className="text-xs text-slate-400">Account Type</p>
-                        <p className="text-white">{account.details.accountType}</p>
+                        <p className="text-xs text-slate-400">Avg Position Size</p>
+                        <p className="text-white font-mono">${(account.avgPositionSize || 0).toLocaleString('en-US', { maximumFractionDigits: 0 })}</p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs text-slate-400">Last Updated</p>
@@ -565,41 +611,38 @@ export function AccountPortfolios({ selectedPeriod }: AccountPortfoliosProps) {
                       </div>
                     </div>
 
-                    {/* Margin Information */}
-                    {(account.details.marginAvailable > 0 || account.details.marginUsed > 0 || account.details.marginMaintenance > 0) && (
-                      <div className="p-4 rounded-lg bg-purple-500/5 border border-purple-500/20">
-                        <div className="flex items-center gap-2 mb-3">
-                          <Zap className="w-4 h-4 text-purple-400" />
-                          <h4 className="text-sm font-semibold text-slate-300">Margin Account Details</h4>
+                    {/* Margin Information - Always show for testing */}
+                    <div className="p-4 rounded-lg bg-purple-500/5 border border-purple-500/20">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Zap className="w-4 h-4 text-purple-400" />
+                        <h4 className="text-sm font-semibold text-slate-300">Margin Account Details</h4>
+                        {!account.details.marginAvailable && !account.details.marginUsed && !account.details.marginMaintenance && (
+                          <Badge variant="outline" className="border-slate-600 text-slate-500 text-xs">
+                            Not Enabled
+                          </Badge>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                        <div className="space-y-1">
+                          <p className="text-xs text-slate-500">Available</p>
+                          <p className={`font-mono font-semibold tabular-nums ${account.details.marginAvailable ? 'text-cyan-400' : 'text-slate-600'}`}>
+                            ${(account.details.marginAvailable || 0).toLocaleString()}
+                          </p>
                         </div>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                          {account.details.marginAvailable > 0 && (
-                            <div className="space-y-1">
-                              <p className="text-xs text-slate-500">Available</p>
-                              <p className="text-cyan-400 font-mono font-semibold tabular-nums">
-                                ${account.details.marginAvailable.toLocaleString()}
-                              </p>
-                            </div>
-                          )}
-                          {account.details.marginUsed > 0 && (
-                            <div className="space-y-1">
-                              <p className="text-xs text-slate-500">Used</p>
-                              <p className="text-slate-300 font-mono tabular-nums">
-                                ${account.details.marginUsed.toLocaleString()}
-                              </p>
-                            </div>
-                          )}
-                          {account.details.marginMaintenance > 0 && (
-                            <div className="space-y-1">
-                              <p className="text-xs text-slate-500">Maintenance Req.</p>
-                              <p className="text-slate-300 font-mono tabular-nums">
-                                ${account.details.marginMaintenance.toLocaleString()}
-                              </p>
-                            </div>
-                          )}
+                        <div className="space-y-1">
+                          <p className="text-xs text-slate-500">Used</p>
+                          <p className={`font-mono tabular-nums ${account.details.marginUsed ? 'text-slate-300' : 'text-slate-600'}`}>
+                            ${(account.details.marginUsed || 0).toLocaleString()}
+                          </p>
+                        </div>
+                        <div className="space-y-1">
+                          <p className="text-xs text-slate-500">Maintenance Req.</p>
+                          <p className={`font-mono tabular-nums ${account.details.marginMaintenance ? 'text-slate-300' : 'text-slate-600'}`}>
+                            ${(account.details.marginMaintenance || 0).toLocaleString()}
+                          </p>
                         </div>
                       </div>
-                    )}
+                    </div>
 
                     {/* Sync Error Warning */}
                     {account.details.positions.length === 0 && account.details.lastSync !== "Never" && (
@@ -771,14 +814,9 @@ export function AccountPortfolios({ selectedPeriod }: AccountPortfoliosProps) {
                                   className={`border-t border-slate-800/50 hover:bg-slate-800/30 transition-colors ${idx === 0 ? 'bg-cyan-500/5' : ''}`}
                                 >
                                   <td className="p-3">
-                                    <div className="flex items-center gap-2">
-                                      <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-cyan-500/20 to-blue-500/20 border border-cyan-500/30 flex items-center justify-center">
-                                        <span className="text-xs font-bold text-cyan-400">{position.symbol.substring(0, 2)}</span>
-                                      </div>
-                                      <div>
-                                        <p className="font-mono font-semibold text-slate-200 text-sm">{position.symbol}</p>
-                                        {idx === 0 && <p className="text-xs text-cyan-400">Top holding</p>}
-                                      </div>
+                                    <div>
+                                      <p className="font-mono font-semibold text-slate-200 text-sm">{position.symbol}</p>
+                                      {idx === 0 && <p className="text-xs text-cyan-400">Top holding</p>}
                                     </div>
                                   </td>
                                   <td className="p-3 text-right">
@@ -823,7 +861,7 @@ export function AccountPortfolios({ selectedPeriod }: AccountPortfoliosProps) {
                       <div className="bg-slate-800/30 rounded-lg p-3 border border-slate-700/50">
                         <div className="flex items-center gap-2 mb-1">
                           <Target className="w-3.5 h-3.5 text-cyan-400" />
-                          <p className="text-xs text-slate-400">Best Performer</p>
+                          <p className="text-xs text-slate-400">Top Holding</p>
                         </div>
                         <p className="font-mono text-white">{account.details.topHolding}</p>
                       </div>
@@ -832,18 +870,16 @@ export function AccountPortfolios({ selectedPeriod }: AccountPortfoliosProps) {
                           <Shield className="w-3.5 h-3.5 text-purple-400" />
                           <p className="text-xs text-slate-400">Risk Level</p>
                         </div>
-                        <p className={`text-sm ${
-                          account.details.riskLevel === 'Conservative' ? 'text-green-400' :
-                          account.details.riskLevel === 'Moderate' ? 'text-yellow-400' :
-                          'text-orange-400'
-                        }`}>{account.details.riskLevel}</p>
+                        <Badge className={getRiskColor(account.details.riskLevel)}>
+                          {account.details.riskLevel}
+                        </Badge>
                       </div>
                       <div className="bg-slate-800/30 rounded-lg p-3 border border-slate-700/50">
                         <div className="flex items-center gap-2 mb-1">
                           <DollarSign className="w-3.5 h-3.5 text-emerald-400" />
                           <p className="text-xs text-slate-400">Account Type</p>
                         </div>
-                        <p className="text-sm text-white">{account.details.accountType}</p>
+                        <p className="text-sm text-white uppercase">{account.details.accountType}</p>
                       </div>
                     </div>
 
